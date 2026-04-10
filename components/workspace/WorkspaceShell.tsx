@@ -2,6 +2,7 @@
 
 import FieldKitHero from "@/components/FieldKitHero";
 import DesignChatPanel from "@/components/workspace/DesignChatPanel";
+import DesignControlsPanel from "@/components/workspace/DesignControlsPanel";
 import ImageLibraryPanel from "@/components/workspace/ImageLibraryPanel";
 import LiveEditorsPanel from "@/components/workspace/LiveEditorsPanel";
 import LivePreviewPanel from "@/components/workspace/LivePreviewPanel";
@@ -28,6 +29,7 @@ export default function WorkspaceShell() {
             </div>
 
             <div className="space-y-4">
+              <DesignControlsPanel />
               <LiveEditorsPanel />
               <DesignChatPanel />
             </div>

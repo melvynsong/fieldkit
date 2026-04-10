@@ -27,6 +27,24 @@ function cssVars(tokens: DesignTokens) {
     "--radius-md": tokens.borderRadius,
     "--space-md": spacing,
     "--shadow-md": shadow,
+    "--font-family":
+      tokens.typography.family === "display"
+        ? '"Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif'
+        : tokens.typography.family === "humanist"
+        ? '"Gill Sans", "Segoe UI", sans-serif'
+        : '"Helvetica Neue", "Segoe UI", sans-serif',
+    "--font-size-base":
+      tokens.typography.scale === "sm"
+        ? "12px"
+        : tokens.typography.scale === "lg"
+        ? "15px"
+        : "13px",
+    "--font-weight-heading":
+      tokens.typography.weight === "normal"
+        ? "500"
+        : tokens.typography.weight === "bold"
+        ? "700"
+        : "600",
   } as CSSProperties;
 }
 
@@ -66,6 +84,12 @@ export default function LivePreviewPanel() {
       ];
 
   const widthClass = isMobile ? "mx-auto max-w-[430px]" : "w-full";
+  const actionFirst = state.previewModel.layoutComposition === "action-first";
+  const contentFirst = state.previewModel.layoutComposition === "content-first";
+  const sectionGridClass =
+    contentFirst && !isMobile
+      ? "grid-cols-1 lg:grid-cols-3"
+      : "grid-cols-1 sm:grid-cols-2";
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)] sm:p-5">
@@ -94,7 +118,10 @@ export default function LivePreviewPanel() {
       </header>
 
       <div className="rounded-2xl border border-slate-200 bg-slate-100 p-2">
-        <div className={`${widthClass} rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-2`} style={cssVars(state.designTokens)}>
+        <div
+          className={`${widthClass} rounded-2xl border border-[var(--color-border)] bg-[var(--color-background)] p-2`}
+          style={cssVars(state.designTokens)}
+        >
           <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-background)]">
             <nav className="border-b border-[var(--color-border)] bg-[var(--color-surface)] px-[var(--space-md)] py-3">
               <div className="flex items-center justify-between">
@@ -117,21 +144,45 @@ export default function LivePreviewPanel() {
               </div>
             </nav>
 
-            <section className="bg-[var(--color-surface)] px-[var(--space-md)] py-5">
+            <section
+              className="bg-[var(--color-surface)] px-[var(--space-md)] py-5"
+              style={{ fontFamily: "var(--font-family)", fontSize: "var(--font-size-base)" }}
+            >
+              {actionFirst ? (
+                <div className="mb-3 flex gap-2">
+                  <button className="rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white">
+                    Primary
+                  </button>
+                  <button className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]">
+                    Secondary
+                  </button>
+                </div>
+              ) : null}
+
               <p className="text-xs uppercase tracking-wider text-[var(--color-muted)]">{state.designExtraction.brand.tone}</p>
-              <h3 className="mt-1 text-lg font-semibold text-[var(--color-text)]">{state.previewModel.heroTitle}</h3>
+              <h3
+                className="mt-1 text-lg text-[var(--color-text)]"
+                style={{ fontWeight: "var(--font-weight-heading)" }}
+              >
+                {state.previewModel.heroTitle}
+              </h3>
               <p className="mt-1 text-sm text-[var(--color-muted)]">{state.previewModel.heroSubtitle}</p>
-              <div className="mt-3 flex gap-2">
-                <button className="rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white">
-                  Primary
-                </button>
-                <button className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]">
-                  Secondary
-                </button>
-              </div>
+              {!actionFirst ? (
+                <div className="mt-3 flex gap-2">
+                  <button className="rounded-[var(--radius-md)] bg-[var(--color-primary)] px-3 py-1.5 text-xs font-semibold text-white">
+                    Primary
+                  </button>
+                  <button className="rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-1.5 text-xs font-semibold text-[var(--color-text)]">
+                    Secondary
+                  </button>
+                </div>
+              ) : null}
             </section>
 
-            <section className="grid grid-cols-1 gap-[var(--space-md)] bg-[var(--color-background)] p-[var(--space-md)] sm:grid-cols-2">
+            <section
+              className={`grid gap-[var(--space-md)] bg-[var(--color-background)] p-[var(--space-md)] ${sectionGridClass}`}
+              style={{ fontFamily: "var(--font-family)", fontSize: "var(--font-size-base)" }}
+            >
               {sections.map((section, index) => (
                 <SectionCard key={`${section.type}-${index}`} label={section.label} />
               ))}

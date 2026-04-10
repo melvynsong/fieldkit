@@ -37,6 +37,11 @@ export interface DesignTokens {
   borderRadius: string;
   spacing: "compact" | "comfortable" | "spacious";
   shadow: "soft" | "medium" | "strong";
+  typography: {
+    family: "sans" | "display" | "humanist";
+    scale: "sm" | "md" | "lg";
+    weight: "normal" | "semibold" | "bold";
+  };
 }
 
 export interface PreviewModel {
@@ -44,8 +49,17 @@ export interface PreviewModel {
   density: "compact" | "comfortable" | "spacious";
   showLabels: boolean;
   navStyle: "top" | "side";
+  layoutComposition: "content-first" | "action-first" | "balanced";
   heroTitle: string;
   heroSubtitle: string;
+}
+
+export interface DesignControls {
+  appStyle: "transactional" | "media" | "hybrid";
+  tone: "professional" | "playful" | "premium" | "friendly";
+  density: "compact" | "comfortable" | "spacious";
+  emphasis: "content" | "actions" | "balanced";
+  visualWeight: "light" | "balanced" | "bold";
 }
 
 export interface ChatMessage {
@@ -59,6 +73,7 @@ export interface DesignWorkspace {
   images: UploadedImage[];
   colorReferences: UploadedImage[];
   designExtraction: DesignExtraction;
+  designControls: DesignControls;
   promptKit: PromptKit;
   designTokens: DesignTokens;
   previewModel: PreviewModel;
@@ -72,6 +87,7 @@ export interface DesignWorkspace {
 
 export interface DesignWorkspacePatch {
   designExtraction?: Partial<DesignExtraction>;
+  designControls?: Partial<DesignControls>;
   promptKit?: Partial<PromptKit>;
   designTokens?: Partial<DesignTokens>;
   previewModel?: Partial<PreviewModel>;

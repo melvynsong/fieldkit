@@ -30,6 +30,7 @@ export default function DesignChatPanel() {
           message: trimmed,
           workspace: {
             designExtraction: state.designExtraction,
+            designControls: state.designControls,
             promptKit: state.promptKit,
             designTokens: state.designTokens,
             previewModel: state.previewModel,

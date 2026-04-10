@@ -3,12 +3,15 @@
 import { create } from "zustand";
 import { buildPromptKit } from "@/lib/prompt-kit";
 import {
+  applyDesignControls,
   applyColorReferenceBlend,
   createChatMessage,
+  createDefaultDesignControls,
   createDefaultPreviewModel,
   createInitialWorkspace,
   designToTokens,
   mergeWorkspacePatch,
+  normalizeDesignControls,
   normalizeDesignTokens,
   parsePromptKitRawText,
   toUploadedImage,
@@ -21,6 +24,9 @@ interface WorkspaceStore {
   addImages: (files: FileList | File[]) => void;
   removeImage: (id: string) => void;
   updateImageTag: (id: string, tag: ImageTag) => void;
+  updateDesignControls: (
+    patch: Partial<ReturnType<typeof createInitialWorkspace>["designControls"]>
+  ) => void;
   toggleColorReference: (id: string) => Promise<void>;
   setPreviewViewport: (viewport: "desktop" | "mobile") => void;
   setUpdating: (value: boolean) => void;
@@ -87,6 +93,30 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }));
   },
 
+  updateDesignControls: (patch) => {
+    set((current) => {
+      const nextControls = normalizeDesignControls(
+        { ...current.state.designControls, ...patch },
+        current.state.designControls
+      );
+      const applied = applyDesignControls(
+        current.state.designTokens,
+        current.state.previewModel,
+        nextControls
+      );
+
+      return {
+        state: {
+          ...current.state,
+          designControls: nextControls,
+          designTokens: applied.designTokens,
+          previewModel: applied.previewModel,
+          designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
+        },
+      };
+    });
+  },
+
   toggleColorReference: async (id) => {
     let selectedImage = null as ReturnType<typeof createInitialWorkspace>["images"][number] | null;
 
@@ -121,13 +151,19 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
     try {
       const current = get().state;
-      const nextTokens = await applyColorReferenceBlend(selectedImage, current.designTokens);
+      const blendedTokens = await applyColorReferenceBlend(selectedImage, current.designTokens);
+      const applied = applyDesignControls(
+        blendedTokens,
+        current.previewModel,
+        current.designControls
+      );
       set((snapshot) => ({
         state: {
           ...snapshot.state,
           isUpdating: false,
-          designTokens: nextTokens,
-          designTokensRawJson: JSON.stringify(nextTokens, null, 2),
+          designTokens: applied.designTokens,
+          previewModel: applied.previewModel,
+          designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
         },
       }));
     } catch {
@@ -230,23 +266,29 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
 
       const design = normalizeDesign(payload.design);
       const promptKit = buildPromptKit(design);
+      const controls = createDefaultDesignControls(design);
       let designTokens = designToTokens(design);
+      let previewModel = createDefaultPreviewModel(design);
 
       const firstColorRef = state.colorReferences[0];
       if (firstColorRef) {
         designTokens = await applyColorReferenceBlend(firstColorRef, designTokens);
       }
 
+      const applied = applyDesignControls(designTokens, previewModel, controls);
+      previewModel = applied.previewModel;
+
       set((snapshot) => ({
         state: {
           ...snapshot.state,
           isUpdating: false,
           designExtraction: design,
+          designControls: controls,
           promptKit,
-          designTokens,
-          previewModel: createDefaultPreviewModel(design),
+          designTokens: applied.designTokens,
+          previewModel,
           extractionRawJson: JSON.stringify(design, null, 2),
-          designTokensRawJson: JSON.stringify(designTokens, null, 2),
+          designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
           promptKitRawText: [
             "[Product Prompt]",
             promptKit.productPrompt,
@@ -284,20 +326,24 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     const promptKit = buildPromptKit(design);
 
     set((current) => {
+      const controls = createDefaultDesignControls(design);
       const designTokens = designToTokens(design);
       const navStyle: "side" | "top" =
         design.navigation.type === "side-nav" || design.navigation.type === "mixed"
           ? "side"
           : "top";
+      const preview = {
+        ...current.state.previewModel,
+        density: design.theme.spacing,
+        navStyle,
+      };
+      const applied = applyDesignControls(designTokens, preview, controls);
       const next = {
         ...current.state,
         designExtraction: design,
+        designControls: controls,
         promptKit,
-        previewModel: {
-          ...current.state.previewModel,
-          density: design.theme.spacing,
-          navStyle,
-        },
+        previewModel: applied.previewModel,
         extractionRawJson: JSON.stringify(design, null, 2),
         promptKitRawText: [
           "[Product Prompt]",
@@ -314,8 +360,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       return {
         state: {
           ...next,
-          designTokens,
-          designTokensRawJson: JSON.stringify(designTokens, null, 2),
+          designTokens: applied.designTokens,
+          designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
         },
       };
     });
@@ -326,13 +372,20 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   applyDesignTokensRaw: (raw) => {
     try {
       const parsed = JSON.parse(raw);
-      const normalized = normalizeDesignTokens(parsed, get().state.designTokens);
+      const current = get().state;
+      const normalized = normalizeDesignTokens(parsed, current.designTokens);
+      const applied = applyDesignControls(
+        normalized,
+        current.previewModel,
+        current.designControls
+      );
 
       set((current) => ({
         state: {
           ...current.state,
-          designTokens: normalized,
-          designTokensRawJson: JSON.stringify(normalized, null, 2),
+          designTokens: applied.designTokens,
+          previewModel: applied.previewModel,
+          designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
           errorMessage: null,
         },
       }));

@@ -39,6 +39,10 @@ function safePatch(raw: unknown) {
     allowed.designExtraction = source.designExtraction;
   }
 
+  if (source.designControls && typeof source.designControls === "object") {
+    allowed.designControls = source.designControls;
+  }
+
   if (source.promptKit && typeof source.promptKit === "object") {
     allowed.promptKit = source.promptKit;
   }
@@ -80,9 +84,10 @@ export async function POST(request: NextRequest) {
     "Return JSON ONLY.",
     "No markdown, no explanation.",
     "Generate a minimal structured patch object using only these top-level keys when needed:",
-    "designTokens, previewModel, designExtraction, promptKit",
+    "designControls, designTokens, previewModel, designExtraction, promptKit",
     "Do not include unknown keys.",
     "Do not overwrite unrelated fields.",
+    "Prefer designControls for behavior/style intent changes (appStyle, tone, density, emphasis, visualWeight).",
     "Colors must be 6-digit HEX where applicable.",
     "Example:",
     '{"designTokens":{"borderRadius":"12px","colors":{"primary":"#6B5CFF"}},"previewModel":{"density":"comfortable"}}',

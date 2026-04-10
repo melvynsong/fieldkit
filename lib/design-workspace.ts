@@ -9,6 +9,7 @@ import {
 } from "@/lib/palette-extractor";
 import type {
   ChatMessage,
+  DesignControls,
   DesignTokens,
   DesignWorkspace,
   DesignWorkspacePatch,
@@ -26,6 +27,59 @@ function asHex(value: unknown, fallback: string): string {
   if (typeof value !== "string") return fallback;
   const trimmed = value.trim();
   return HEX_RE.test(trimmed) ? trimmed : fallback;
+}
+
+export function normalizeDesignControls(
+  raw: unknown,
+  fallback?: DesignControls
+): DesignControls {
+  const prev =
+    fallback ?? {
+      appStyle: "hybrid",
+      tone: "professional",
+      density: "comfortable",
+      emphasis: "balanced",
+      visualWeight: "balanced",
+    };
+
+  if (!raw || typeof raw !== "object") {
+    return prev;
+  }
+
+  const source = raw as Record<string, unknown>;
+  return {
+    appStyle:
+      source.appStyle === "transactional" ||
+      source.appStyle === "media" ||
+      source.appStyle === "hybrid"
+        ? source.appStyle
+        : prev.appStyle,
+    tone:
+      source.tone === "professional" ||
+      source.tone === "playful" ||
+      source.tone === "premium" ||
+      source.tone === "friendly"
+        ? source.tone
+        : prev.tone,
+    density:
+      source.density === "compact" ||
+      source.density === "comfortable" ||
+      source.density === "spacious"
+        ? source.density
+        : prev.density,
+    emphasis:
+      source.emphasis === "content" ||
+      source.emphasis === "actions" ||
+      source.emphasis === "balanced"
+        ? source.emphasis
+        : prev.emphasis,
+    visualWeight:
+      source.visualWeight === "light" ||
+      source.visualWeight === "balanced" ||
+      source.visualWeight === "bold"
+        ? source.visualWeight
+        : prev.visualWeight,
+  };
 }
 
 function normalizePromptKit(raw: unknown, fallback?: PromptKit): PromptKit {
@@ -62,6 +116,11 @@ export function normalizeDesignTokens(raw: unknown, fallback?: DesignTokens): De
     borderRadius: "12px",
     spacing: "comfortable",
     shadow: "soft",
+    typography: {
+      family: "sans",
+      scale: "md",
+      weight: "semibold",
+    },
   };
 
   if (!raw || typeof raw !== "object") {
@@ -99,6 +158,29 @@ export function normalizeDesignTokens(raw: unknown, fallback?: DesignTokens): De
       source.shadow === "soft" || source.shadow === "medium" || source.shadow === "strong"
         ? source.shadow
         : prev.shadow,
+    typography:
+      source.typography && typeof source.typography === "object"
+        ? {
+            family:
+              (source.typography as Record<string, unknown>).family === "sans" ||
+              (source.typography as Record<string, unknown>).family === "display" ||
+              (source.typography as Record<string, unknown>).family === "humanist"
+                ? ((source.typography as Record<string, unknown>).family as "sans" | "display" | "humanist")
+                : prev.typography.family,
+            scale:
+              (source.typography as Record<string, unknown>).scale === "sm" ||
+              (source.typography as Record<string, unknown>).scale === "md" ||
+              (source.typography as Record<string, unknown>).scale === "lg"
+                ? ((source.typography as Record<string, unknown>).scale as "sm" | "md" | "lg")
+                : prev.typography.scale,
+            weight:
+              (source.typography as Record<string, unknown>).weight === "normal" ||
+              (source.typography as Record<string, unknown>).weight === "semibold" ||
+              (source.typography as Record<string, unknown>).weight === "bold"
+                ? ((source.typography as Record<string, unknown>).weight as "normal" | "semibold" | "bold")
+                : prev.typography.weight,
+          }
+        : prev.typography,
   };
 }
 
@@ -122,6 +204,11 @@ export function designToTokens(design: DesignExtraction): DesignTokens {
     borderRadius: design.theme.borderRadius === "sharp" ? "6px" : "12px",
     spacing: design.theme.spacing,
     shadow: "soft",
+    typography: {
+      family: "sans",
+      scale: "md",
+      weight: "semibold",
+    },
   };
 }
 
@@ -132,27 +219,139 @@ export function createDefaultPreviewModel(design: DesignExtraction): PreviewMode
     density: design.theme.spacing,
     showLabels: true,
     navStyle: side ? "side" : "top",
+    layoutComposition: "balanced",
     heroTitle: "Design Workspace",
     heroSubtitle: design.contentHints.likelyPurpose,
+  };
+}
+
+export function createDefaultDesignControls(design: DesignExtraction): DesignControls {
+  return {
+    appStyle: design.layout.structure === "dashboard" ? "transactional" : "hybrid",
+    tone: "professional",
+    density: design.theme.spacing,
+    emphasis: "balanced",
+    visualWeight: "balanced",
+  };
+}
+
+export function applyDesignControls(
+  tokens: DesignTokens,
+  preview: PreviewModel,
+  controls: DesignControls
+): { designTokens: DesignTokens; previewModel: PreviewModel } {
+  let nextTokens = normalizeDesignTokens(tokens, tokens);
+  let nextPreview: PreviewModel = {
+    ...preview,
+    density: controls.density,
+    layoutComposition:
+      controls.emphasis === "content"
+        ? "content-first"
+        : controls.emphasis === "actions"
+        ? "action-first"
+        : "balanced",
+  };
+
+  nextTokens = {
+    ...nextTokens,
+    spacing: controls.density,
+    shadow:
+      controls.visualWeight === "light"
+        ? "soft"
+        : controls.visualWeight === "bold"
+        ? "strong"
+        : "medium",
+    borderRadius:
+      controls.appStyle === "transactional"
+        ? "10px"
+        : controls.appStyle === "media"
+        ? "18px"
+        : "12px",
+    typography: {
+      family:
+        controls.appStyle === "media"
+          ? "display"
+          : controls.tone === "friendly"
+          ? "humanist"
+          : "sans",
+      scale:
+        controls.density === "compact"
+          ? "sm"
+          : controls.density === "spacious"
+          ? "lg"
+          : "md",
+      weight:
+        controls.visualWeight === "light"
+          ? "normal"
+          : controls.visualWeight === "bold"
+          ? "bold"
+          : "semibold",
+    },
+  };
+
+  if (controls.appStyle === "transactional") {
+    nextTokens.colors.primary = blendHex(nextTokens.colors.primary, "#1f3a5f", 0.2);
+    nextTokens.colors.background = blendHex(nextTokens.colors.background, "#f5f7fb", 0.18);
+    nextPreview = { ...nextPreview, navStyle: "side" };
+  }
+
+  if (controls.appStyle === "media") {
+    nextTokens.colors.accent = blendHex(nextTokens.colors.accent, "#ff5a5f", 0.26);
+    nextTokens.colors.secondary = blendHex(nextTokens.colors.secondary, "#fde7d6", 0.24);
+    nextPreview = { ...nextPreview, navStyle: "top" };
+  }
+
+  if (controls.tone === "premium") {
+    nextTokens.colors.primary = blendHex(nextTokens.colors.primary, "#111827", 0.22);
+    nextTokens.colors.surface = blendHex(nextTokens.colors.surface, "#f8fafc", 0.14);
+    nextTokens.colors.text = blendHex(nextTokens.colors.text, "#0b1220", 0.2);
+  }
+
+  if (controls.tone === "playful") {
+    nextTokens.colors.accent = blendHex(nextTokens.colors.accent, "#f97316", 0.3);
+    nextTokens.colors.secondary = blendHex(nextTokens.colors.secondary, "#fff4d8", 0.28);
+  }
+
+  if (controls.tone === "friendly") {
+    nextTokens.colors.primary = blendHex(nextTokens.colors.primary, "#2563eb", 0.14);
+    nextTokens.colors.background = blendHex(nextTokens.colors.background, "#f7fbff", 0.2);
+  }
+
+  if (controls.visualWeight === "light") {
+    nextTokens.colors.border = blendHex(nextTokens.colors.border, "#e8edf6", 0.28);
+  }
+
+  if (controls.visualWeight === "bold") {
+    nextTokens.colors.border = blendHex(nextTokens.colors.border, "#9aa9c2", 0.35);
+    nextTokens.colors.text = blendHex(nextTokens.colors.text, "#0f172a", 0.25);
+  }
+
+  return {
+    designTokens: normalizeDesignTokens(nextTokens, nextTokens),
+    previewModel: nextPreview,
   };
 }
 
 export function createInitialWorkspace(): DesignWorkspace {
   const design = normalizeDesign(null);
   const promptKit = buildPromptKit(design);
-  const designTokens = designToTokens(design);
+  const designControls = createDefaultDesignControls(design);
+  const initialTokens = designToTokens(design);
+  const initialPreview = createDefaultPreviewModel(design);
+  const applied = applyDesignControls(initialTokens, initialPreview, designControls);
 
   return {
     images: [],
     colorReferences: [],
     designExtraction: design,
+    designControls,
     promptKit,
-    designTokens,
-    previewModel: createDefaultPreviewModel(design),
+    designTokens: applied.designTokens,
+    previewModel: applied.previewModel,
     chatHistory: [],
     isUpdating: false,
     extractionRawJson: JSON.stringify(design, null, 2),
-    designTokensRawJson: JSON.stringify(designTokens, null, 2),
+    designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
     promptKitRawText: [
       "[Product Prompt]",
       promptKit.productPrompt,
@@ -196,34 +395,48 @@ export function mergeWorkspacePatch(
   patch: DesignWorkspacePatch
 ): Pick<
   DesignWorkspace,
-  "designExtraction" | "promptKit" | "designTokens" | "previewModel" | "extractionRawJson" | "designTokensRawJson" | "promptKitRawText"
+  | "designExtraction"
+  | "designControls"
+  | "promptKit"
+  | "designTokens"
+  | "previewModel"
+  | "extractionRawJson"
+  | "designTokensRawJson"
+  | "promptKitRawText"
 > {
   const mergedDesign = patch.designExtraction
     ? normalizeDesign({ ...state.designExtraction, ...patch.designExtraction })
     : state.designExtraction;
 
+  const mergedControls = patch.designControls
+    ? normalizeDesignControls({ ...state.designControls, ...patch.designControls }, state.designControls)
+    : state.designControls;
+
   const mergedPromptKit = patch.promptKit
     ? normalizePromptKit({ ...state.promptKit, ...patch.promptKit }, state.promptKit)
     : state.promptKit;
 
-  const mergedDesignTokens = patch.designTokens
+  const baseDesignTokens = patch.designTokens
     ? normalizeDesignTokens({ ...state.designTokens, ...patch.designTokens }, state.designTokens)
     : state.designTokens;
 
-  const mergedPreview = patch.previewModel
+  const basePreview = patch.previewModel
     ? {
         ...state.previewModel,
         ...patch.previewModel,
       }
     : state.previewModel;
 
+  const withControls = applyDesignControls(baseDesignTokens, basePreview, mergedControls);
+
   return {
     designExtraction: mergedDesign,
+    designControls: mergedControls,
     promptKit: mergedPromptKit,
-    designTokens: mergedDesignTokens,
-    previewModel: mergedPreview,
+    designTokens: withControls.designTokens,
+    previewModel: withControls.previewModel,
     extractionRawJson: JSON.stringify(mergedDesign, null, 2),
-    designTokensRawJson: JSON.stringify(mergedDesignTokens, null, 2),
+    designTokensRawJson: JSON.stringify(withControls.designTokens, null, 2),
     promptKitRawText: [
       "[Product Prompt]",
       mergedPromptKit.productPrompt,
