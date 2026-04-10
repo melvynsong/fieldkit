@@ -95,12 +95,17 @@ export default function UploadPanel({
 
         {selectedImage ? (
           <div className="mt-4 flex flex-col items-center gap-4">
-            <div className="w-fit rounded-lg border border-slate-200 bg-white p-2">
+            <div className="w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedImage.previewUrl}
                 alt="Selected preview"
-                className="h-24 w-24 rounded object-cover"
+                className="w-full rounded-lg object-contain"
+                style={{
+                  maxHeight: "20rem",
+                  filter: "contrast(1.05) saturate(1.05)",
+                  display: "block",
+                }}
               />
             </div>
 

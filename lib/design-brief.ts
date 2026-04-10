@@ -2,6 +2,7 @@ import type { DesignExtraction } from "@/lib/design-normalizer";
 
 export interface DesignBrief {
   summary: string;
+  colorStyleSummary: string;
   likelyPurpose: string;
   tone: string;
   personality: string[];
@@ -34,12 +35,19 @@ export function buildDesignBrief(design: DesignExtraction): DesignBrief {
     `${titleCase(design.theme.backgroundStyle)} background treatment`,
   ];
 
+  const rec = design.colors.recommended;
+  const colorStyleSummary =
+    `The interface uses a primary tone of ${rec.primary} with ${rec.background} backgrounds, ` +
+    `${rec.surface} surface panels, and ${rec.accent} accent highlights, ` +
+    `creating a ${design.brand.tone} visual character.`;
+
   const summary =
     `${design.contentHints.likelyPurpose} experience with a ${design.brand.tone} tone, ` +
     `${titleCase(design.layout.structure)} layout structure, and ${titleCase(design.navigation.type)} navigation.`;
 
   return {
     summary,
+    colorStyleSummary,
     likelyPurpose: design.contentHints.likelyPurpose,
     tone: design.brand.tone,
     personality,

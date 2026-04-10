@@ -32,6 +32,19 @@ export interface DesignSection {
   importance: Importance;
 }
 
+export interface ColorSet {
+  primary: string;
+  secondary: string;
+  accent: string;
+  background: string;
+  surface: string;
+}
+
+export interface Colors {
+  observed: ColorSet;
+  recommended: ColorSet;
+}
+
 export interface DesignExtraction {
   brand: {
     name: string;
@@ -46,6 +59,7 @@ export interface DesignExtraction {
     borderRadius: string;
     spacing: Spacing;
   };
+  colors: Colors;
   navigation: {
     type: NavigationType;
     items: string[];
@@ -85,6 +99,33 @@ function toStringArray(value: unknown): string[] {
     .filter((item) => typeof item === "string")
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+const HEX_RE = /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/;
+
+const COLOR_DEFAULTS: ColorSet = {
+  primary: "#1f3a5f",
+  secondary: "#eaf1f8",
+  accent: "#5b7cfa",
+  background: "#f5f7fb",
+  surface: "#ffffff",
+};
+
+function toHexColor(value: unknown, fallback: string): string {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return HEX_RE.test(trimmed) ? trimmed : fallback;
+}
+
+function normalizeColorSet(value: unknown): ColorSet {
+  const raw = isRecord(value) ? value : {};
+  return {
+    primary: toHexColor(raw.primary, COLOR_DEFAULTS.primary),
+    secondary: toHexColor(raw.secondary, COLOR_DEFAULTS.secondary),
+    accent: toHexColor(raw.accent, COLOR_DEFAULTS.accent),
+    background: toHexColor(raw.background, COLOR_DEFAULTS.background),
+    surface: toHexColor(raw.surface, COLOR_DEFAULTS.surface),
+  };
 }
 
 function toEnumValue<T extends string>(
@@ -153,6 +194,7 @@ export function normalizeDesign(raw: unknown): DesignExtraction {
   const source = isRecord(raw) ? raw : {};
   const brand = isRecord(source.brand) ? source.brand : {};
   const theme = isRecord(source.theme) ? source.theme : {};
+  const rawColors = isRecord(source.colors) ? source.colors : {};
   const navigation = isRecord(source.navigation) ? source.navigation : {};
   const layout = isRecord(source.layout) ? source.layout : {};
   const contentHints = isRecord(source.contentHints) ? source.contentHints : {};
@@ -161,6 +203,20 @@ export function normalizeDesign(raw: unknown): DesignExtraction {
     ? layout.sections.map(normalizeSection)
     : [];
 
+  // Derive observed colors: prefer explicit colors.observed, fall back to theme fields
+  const observedSource = isRecord(rawColors.observed)
+    ? rawColors.observed
+    : {
+        primary: theme.primaryColor,
+        secondary: theme.secondaryColor,
+        accent: theme.accentColor,
+      };
+  const observedColors = normalizeColorSet(observedSource);
+
+  const recommendedColors = normalizeColorSet(
+    isRecord(rawColors.recommended) ? rawColors.recommended : observedSource
+  );
+
   return {
     brand: {
       name: toStringValue(brand.name, "Unknown Brand"),
@@ -168,9 +224,9 @@ export function normalizeDesign(raw: unknown): DesignExtraction {
       personality: toStringArray(brand.personality),
     },
     theme: {
-      primaryColor: toStringValue(theme.primaryColor, "#1f2937"),
-      secondaryColor: toStringValue(theme.secondaryColor, "#64748b"),
-      accentColor: toStringValue(theme.accentColor, "#0ea5e9"),
+      primaryColor: toHexColor(theme.primaryColor, COLOR_DEFAULTS.primary),
+      secondaryColor: toHexColor(theme.secondaryColor, COLOR_DEFAULTS.secondary),
+      accentColor: toHexColor(theme.accentColor, COLOR_DEFAULTS.accent),
       backgroundStyle: toStringValue(theme.backgroundStyle, "solid"),
       borderRadius: toStringValue(theme.borderRadius, "medium"),
       spacing: toEnumValue(
@@ -178,6 +234,10 @@ export function normalizeDesign(raw: unknown): DesignExtraction {
         ["compact", "comfortable", "spacious"],
         "comfortable"
       ),
+    },
+    colors: {
+      observed: observedColors,
+      recommended: recommendedColors,
     },
     navigation: {
       type: toEnumValue(
