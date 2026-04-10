@@ -66,15 +66,15 @@ export default function UploadPanel({
   }, [selectedImage]);
 
   return (
-    <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
       <div className="mb-5">
-        <h2 className="text-lg font-semibold text-zinc-900">Upload / Capture</h2>
-        <p className="mt-1 text-sm text-zinc-600">
+        <h2 className="text-lg font-semibold text-slate-900">Upload / Capture</h2>
+        <p className="mt-1 text-sm text-slate-600">
           Use one control for desktop upload and mobile camera capture.
         </p>
       </div>
 
-      <label className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-zinc-300 bg-zinc-50 px-5 py-8 text-center transition hover:border-zinc-400 hover:bg-zinc-100">
+      <label className="group flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center transition hover:border-slate-400 hover:bg-slate-100">
         <input
           type="file"
           accept="image/*"
@@ -82,21 +82,21 @@ export default function UploadPanel({
           onChange={handleImageChange}
           className="hidden"
         />
-        <span className="rounded-full bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition group-hover:bg-zinc-700">
+        <span className="rounded-full bg-slate-800 px-4 py-2 text-sm font-medium text-white transition group-hover:bg-slate-700">
           Select or Capture Image
         </span>
-        <span className="text-xs text-zinc-500">
+        <span className="text-xs text-slate-500">
           On mobile this can open camera or gallery.
         </span>
       </label>
 
-      <div className="mt-5 rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-        <p className="text-sm font-medium text-zinc-700">Selected</p>
-        <p className="mt-1 text-sm text-zinc-600">{statusLabel}</p>
+      <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <p className="text-sm font-medium text-slate-700">Selected</p>
+        <p className="mt-1 text-sm text-slate-600">{statusLabel}</p>
 
         {selectedImage ? (
           <div className="mt-4 flex flex-col items-center gap-4">
-            <div className="w-fit rounded-lg border border-zinc-200 bg-white p-2">
+            <div className="w-fit rounded-lg border border-slate-200 bg-white p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={selectedImage.previewUrl}
@@ -109,7 +109,7 @@ export default function UploadPanel({
               type="button"
               onClick={() => onGeneratePrototype(selectedImage.file)}
               disabled={!selectedImage || isGenerating}
-              className="inline-flex min-w-44 items-center justify-center rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex min-w-44 items-center justify-center rounded-full bg-slate-800 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isGenerating ? "Generating..." : "Generate Prototype"}
             </button>
@@ -119,7 +119,7 @@ export default function UploadPanel({
             <button
               type="button"
               disabled
-              className="inline-flex min-w-44 items-center justify-center rounded-full bg-zinc-900 px-6 py-2.5 text-sm font-semibold text-white opacity-50"
+              className="inline-flex min-w-44 items-center justify-center rounded-full bg-slate-800 px-6 py-2.5 text-sm font-semibold text-white opacity-50"
             >
               Generate Prototype
             </button>
