@@ -78,7 +78,6 @@ export default function UploadPanel({
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleImageChange}
           className="hidden"
         />
@@ -86,7 +85,7 @@ export default function UploadPanel({
           Select or Capture Image
         </span>
         <span className="text-xs text-slate-500">
-          On mobile this can open camera or gallery.
+          On iPhone, choose from Photos to pick saved screenshots.
         </span>
       </label>
 

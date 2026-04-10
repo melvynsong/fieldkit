@@ -4,6 +4,32 @@ interface GeneratedPageBuilderProps {
   model: GeneratedPageModel;
 }
 
+function hexToRgba(color: string, alpha: number, fallback: string): string {
+  const hex = color.replace("#", "").trim();
+
+  if (!(hex.length === 3 || hex.length === 6)) {
+    return fallback;
+  }
+
+  const normalized =
+    hex.length === 3
+      ? hex
+          .split("")
+          .map((char) => char + char)
+          .join("")
+      : hex;
+
+  const int = Number.parseInt(normalized, 16);
+  if (Number.isNaN(int)) {
+    return fallback;
+  }
+
+  const r = (int >> 16) & 255;
+  const g = (int >> 8) & 255;
+  const b = int & 255;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function ZoneLabel({ show, text }: { show: boolean; text: string }) {
   if (!show) {
     return null;
@@ -25,6 +51,8 @@ function SectionBlock({ model, section }: { model: GeneratedPageModel; section: 
       : "p-4";
 
   const label = section.label || "Section";
+  const accentSoft = hexToRgba(model.theme.accentColor, 0.1, "rgba(15,23,42,0.08)");
+  const primarySoft = hexToRgba(model.theme.primaryColor, 0.08, "rgba(15,23,42,0.06)");
 
   if (section.type === "table" || section.type === "list") {
     return (
@@ -34,10 +62,10 @@ function SectionBlock({ model, section }: { model: GeneratedPageModel; section: 
           <ZoneLabel show={model.showLabels} text={label} />
         </div>
         <div className="space-y-2">
-          <div className="h-8 rounded-md bg-slate-100" />
-          <div className="h-8 rounded-md bg-slate-100" />
-          <div className="h-8 rounded-md bg-slate-100" />
-          <div className="h-8 rounded-md bg-slate-100" />
+          <div className="h-8 rounded-md" style={{ backgroundColor: primarySoft }} />
+          <div className="h-8 rounded-md" style={{ backgroundColor: primarySoft }} />
+          <div className="h-8 rounded-md" style={{ backgroundColor: primarySoft }} />
+          <div className="h-8 rounded-md" style={{ backgroundColor: primarySoft }} />
         </div>
       </section>
     );
@@ -54,7 +82,10 @@ function SectionBlock({ model, section }: { model: GeneratedPageModel; section: 
           <div className="h-9 rounded-md border border-slate-200 bg-slate-50" />
           <div className="h-9 rounded-md border border-slate-200 bg-slate-50" />
           <div className="h-9 rounded-md border border-slate-200 bg-slate-50" />
-          <div className="inline-flex rounded-md bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white">
+          <div
+            className="inline-flex rounded-md px-3 py-1.5 text-xs font-semibold text-white"
+            style={{ backgroundColor: model.theme.primaryColor }}
+          >
             Primary Action
           </div>
         </div>
@@ -70,10 +101,10 @@ function SectionBlock({ model, section }: { model: GeneratedPageModel; section: 
           <ZoneLabel show={model.showLabels} text={label} />
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="h-20 rounded-lg border border-slate-200 bg-white" />
-          <div className="h-20 rounded-lg border border-slate-200 bg-white" />
-          <div className="h-20 rounded-lg border border-slate-200 bg-white" />
-          <div className="h-20 rounded-lg border border-slate-200 bg-white" />
+          <div className="h-20 rounded-lg border border-slate-200 bg-white" style={{ boxShadow: `inset 0 0 0 1px ${accentSoft}` }} />
+          <div className="h-20 rounded-lg border border-slate-200 bg-white" style={{ boxShadow: `inset 0 0 0 1px ${accentSoft}` }} />
+          <div className="h-20 rounded-lg border border-slate-200 bg-white" style={{ boxShadow: `inset 0 0 0 1px ${accentSoft}` }} />
+          <div className="h-20 rounded-lg border border-slate-200 bg-white" style={{ boxShadow: `inset 0 0 0 1px ${accentSoft}` }} />
         </div>
       </section>
     );
@@ -133,6 +164,9 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
       : "rounded-2xl";
 
   const navItems = model.navigation.items.slice(0, model.previewMode === "mobile" ? 3 : 6);
+  const primaryTint = hexToRgba(model.theme.primaryColor, 0.1, "rgba(15,23,42,0.08)");
+  const secondaryTint = hexToRgba(model.theme.secondaryColor, 0.12, "rgba(100,116,139,0.12)");
+  const accentTint = hexToRgba(model.theme.accentColor, 0.14, "rgba(15,118,110,0.14)");
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-[0_2px_8px_rgba(15,23,42,0.04)]">
@@ -147,7 +181,7 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
         <div className={`${frameWidthClass} rounded-2xl border border-slate-300 bg-white p-2`}>
           <div className={`${canvasClass} overflow-hidden border border-slate-200 bg-slate-50`}>
             {model.navigation.type === "top-nav" ? (
-              <nav className="border-b border-slate-200 bg-white px-4 py-3">
+              <nav className="border-b border-slate-200 px-4 py-3" style={{ backgroundColor: primaryTint }}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-slate-800">Navigation</p>
                   <ZoneLabel show={model.showLabels} text="Top Nav" />
@@ -156,7 +190,8 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
                   {navItems.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full border border-slate-300 bg-slate-50 px-3 py-1 text-xs text-slate-700"
+                      className="rounded-full border border-slate-300 px-3 py-1 text-xs text-slate-700"
+                      style={{ backgroundColor: secondaryTint }}
                     >
                       {item}
                     </span>
@@ -173,7 +208,10 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
               }
             >
               {model.navigation.type === "side-nav" ? (
-                <aside className="border-b border-slate-200 bg-white p-4 md:min-h-full md:border-b-0 md:border-r">
+                <aside
+                  className="border-b border-slate-200 p-4 md:min-h-full md:border-b-0 md:border-r"
+                  style={{ backgroundColor: primaryTint }}
+                >
                   <div className="mb-3 flex items-center justify-between">
                     <p className="text-sm font-semibold text-slate-800">Navigation</p>
                     <ZoneLabel show={model.showLabels} text="Side Nav" />
@@ -182,7 +220,8 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
                     {navItems.map((item) => (
                       <div
                         key={item}
-                        className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700"
+                        className="rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700"
+                        style={{ backgroundColor: secondaryTint }}
                       >
                         {item}
                       </div>
@@ -192,7 +231,7 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
               ) : null}
 
               <div className="space-y-3 p-4">
-                <section className="rounded-xl border border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100 p-4">
+                <section className="rounded-xl border border-slate-200 p-4" style={{ backgroundColor: primaryTint }}>
                   <div className="mb-3 flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-semibold text-slate-900">{model.hero.title}</h3>
@@ -201,10 +240,13 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
                     <ZoneLabel show={model.showLabels} text="Hero" />
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button className="rounded-md bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white">
+                    <button className="rounded-md px-3 py-1.5 text-xs font-semibold text-white" style={{ backgroundColor: model.theme.primaryColor }}>
                       {model.actions.primary}
                     </button>
-                    <button className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                    <button
+                      className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                      style={{ borderColor: model.theme.secondaryColor }}
+                    >
                       {model.actions.secondary}
                     </button>
                   </div>
@@ -214,15 +256,15 @@ export default function GeneratedPageBuilder({ model }: GeneratedPageBuilderProp
                   <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                     <article className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Summary Card</p>
-                      <div className="mt-2 h-6 w-1/2 rounded bg-slate-200" />
+                      <div className="mt-2 h-6 w-1/2 rounded" style={{ backgroundColor: accentTint }} />
                     </article>
                     <article className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Summary Card</p>
-                      <div className="mt-2 h-6 w-1/2 rounded bg-slate-200" />
+                      <div className="mt-2 h-6 w-1/2 rounded" style={{ backgroundColor: accentTint }} />
                     </article>
                     <article className="rounded-xl border border-slate-200 bg-white p-3">
                       <p className="text-xs text-slate-500">Summary Card</p>
-                      <div className="mt-2 h-6 w-1/2 rounded bg-slate-200" />
+                      <div className="mt-2 h-6 w-1/2 rounded" style={{ backgroundColor: accentTint }} />
                     </article>
                   </section>
                 ) : null}

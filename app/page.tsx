@@ -25,6 +25,57 @@ interface ExtractDesignApiResponse {
   design?: unknown;
 }
 
+async function normalizeImageForExtraction(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const nextImage = new Image();
+      nextImage.onload = () => resolve(nextImage);
+      nextImage.onerror = () => reject(new Error("Unable to read selected image."));
+      nextImage.src = objectUrl;
+    });
+
+    const maxDimension = 1600;
+    const scale = Math.min(
+      1,
+      maxDimension / Math.max(image.naturalWidth, image.naturalHeight)
+    );
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return file;
+    }
+
+    context.drawImage(image, 0, 0, width, height);
+
+    const jpegBlob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/jpeg", 0.88);
+    });
+
+    if (!jpegBlob) {
+      return file;
+    }
+
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "upload";
+    return new File([jpegBlob], `${baseName}.jpg`, { type: "image/jpeg" });
+  } catch {
+    return file;
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export default function Home() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [design, setDesign] = useState<DesignExtraction | null>(null);
@@ -44,8 +95,9 @@ export default function Home() {
     const startedAt = Date.now();
 
     try {
+      const normalizedFile = await normalizeImageForExtraction(file);
       const formData = new FormData();
-      formData.append("image", file);
+      formData.append("image", normalizedFile);
 
       const response = await fetch("/api/extract-design", {
         method: "POST",

@@ -20,6 +20,13 @@ export interface PrototypeControlState {
 
 export interface GeneratedPageModel {
   previewMode: PreviewMode;
+  theme: {
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+    backgroundStyle: string;
+    borderRadius: string;
+  };
   navigation: {
     type: "top-nav" | "side-nav";
     items: string[];
@@ -116,6 +123,19 @@ export function createDefaultPrototypeControls(
   };
 }
 
+function sanitizeColor(value: string, fallback: string): string {
+  const trimmed = value.trim();
+  const isHex = /^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6})$/.test(trimmed);
+  const isRgb = /^rgba?\(([^)]+)\)$/.test(trimmed);
+  const isHsl = /^hsla?\(([^)]+)\)$/.test(trimmed);
+
+  if (isHex || isRgb || isHsl) {
+    return trimmed;
+  }
+
+  return fallback;
+}
+
 export function buildGeneratedPageModel(
   design: DesignExtraction,
   controls: PrototypeControlState
@@ -143,6 +163,13 @@ export function buildGeneratedPageModel(
 
   return {
     previewMode: controls.previewMode,
+    theme: {
+      primaryColor: sanitizeColor(design.theme.primaryColor, "#1e3a5f"),
+      secondaryColor: sanitizeColor(design.theme.secondaryColor, "#64748b"),
+      accentColor: sanitizeColor(design.theme.accentColor, "#0f766e"),
+      backgroundStyle: design.theme.backgroundStyle,
+      borderRadius: design.theme.borderRadius,
+    },
     navigation: {
       type: navigationType,
       items:

@@ -14,6 +14,14 @@ interface OpenAIChatResponse {
   }>;
 }
 
+interface OpenAIErrorPayload {
+  error?: {
+    message?: string;
+    code?: string;
+    type?: string;
+  };
+}
+
 function safeErrorResponse(
   status: number,
   error: string,
@@ -50,6 +58,21 @@ export async function POST(request: NextRequest) {
 
   if (!image.type.startsWith("image/")) {
     return safeErrorResponse(400, "Uploaded file must be an image.", fallbackDesign);
+  }
+
+  const supportedImageTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+  ]);
+
+  if (!supportedImageTypes.has(image.type)) {
+    return safeErrorResponse(
+      400,
+      "Unsupported image format. Please use JPEG, PNG, WEBP, or GIF. On iPhone, choosing a screenshot usually works best.",
+      fallbackDesign
+    );
   }
 
   const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
@@ -93,11 +116,26 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      return safeErrorResponse(
-        502,
-        "Design extraction request failed.",
-        fallbackDesign
-      );
+      let detail = "Design extraction request failed.";
+
+      try {
+        const errorPayload = (await response.json()) as OpenAIErrorPayload;
+        const errorCode = errorPayload.error?.code;
+
+        if (response.status === 401 || errorCode === "invalid_api_key") {
+          detail = "OpenAI authentication failed. Check OPENAI_API_KEY.";
+        } else if (errorCode === "insufficient_quota") {
+          detail = "OpenAI quota exceeded. Check your billing and usage limits.";
+        } else if (response.status === 404) {
+          detail = "Configured OPENAI_MODEL is unavailable for this account.";
+        } else if (errorPayload.error?.message) {
+          detail = `OpenAI request failed: ${errorPayload.error.message}`;
+        }
+      } catch {
+        // Keep generic error message if error payload is not JSON.
+      }
+
+      return safeErrorResponse(502, detail, fallbackDesign);
     }
 
     const payload = (await response.json()) as OpenAIChatResponse;
