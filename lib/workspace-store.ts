@@ -21,6 +21,8 @@ import type { DesignWorkspacePatch, ImageTag } from "@/lib/workspace-types";
 
 interface WorkspaceStore {
   state: ReturnType<typeof createInitialWorkspace>;
+  showGuidance: boolean;
+  toggleGuidance: () => void;
   addImages: (files: FileList | File[]) => void;
   removeImage: (id: string) => void;
   updateImageTag: (id: string, tag: ImageTag) => void;
@@ -39,8 +41,25 @@ interface WorkspaceStore {
   applyPromptKitRaw: (raw: string) => boolean;
 }
 
+function controlsToPromptSuffix(controls: ReturnType<typeof createDefaultDesignControls>): string {
+  return [
+    "",
+    "[Design Controls]",
+    `App Style: ${controls.appStyle}`,
+    `Tone: ${controls.tone}`,
+    `Density: ${controls.density}`,
+    `Emphasis: ${controls.emphasis}`,
+    `Visual Weight: ${controls.visualWeight}`,
+  ].join("\n");
+}
+
 export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   state: createInitialWorkspace(),
+  showGuidance: true,
+
+  toggleGuidance: () => {
+    set((current) => ({ showGuidance: !current.showGuidance }));
+  },
 
   addImages: (files) => {
     const nextFiles = Array.from(files);
@@ -105,6 +124,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         nextControls
       );
 
+      const basePromptText = current.state.promptKitRawText.replace(/\n\[Design Controls\][\s\S]*$/, "");
+      const nextPromptKitText = basePromptText + controlsToPromptSuffix(nextControls);
+
       return {
         state: {
           ...current.state,
@@ -112,6 +134,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
           designTokens: applied.designTokens,
           previewModel: applied.previewModel,
           designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
+          promptKitRawText: nextPromptKitText,
         },
       };
     });
