@@ -75,6 +75,7 @@ export interface DesignWorkspace {
   designExtraction: DesignExtraction;
   designControls: DesignControls;
   promptKit: PromptKit;
+  baseDesignTokens: DesignTokens;
   designTokens: DesignTokens;
   previewModel: PreviewModel;
   chatHistory: ChatMessage[];

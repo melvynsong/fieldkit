@@ -100,7 +100,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         current.state.designControls
       );
       const applied = applyDesignControls(
-        current.state.designTokens,
+        current.state.baseDesignTokens,
         current.state.previewModel,
         nextControls
       );
@@ -161,6 +161,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         state: {
           ...snapshot.state,
           isUpdating: false,
+          baseDesignTokens: blendedTokens,
           designTokens: applied.designTokens,
           previewModel: applied.previewModel,
           designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
@@ -285,6 +286,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
           designExtraction: design,
           designControls: controls,
           promptKit,
+          baseDesignTokens: designTokens,
           designTokens: applied.designTokens,
           previewModel,
           extractionRawJson: JSON.stringify(design, null, 2),
@@ -360,6 +362,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       return {
         state: {
           ...next,
+          baseDesignTokens: designTokens,
           designTokens: applied.designTokens,
           designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),
         },
@@ -383,6 +386,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       set((current) => ({
         state: {
           ...current.state,
+          baseDesignTokens: normalized,
           designTokens: applied.designTokens,
           previewModel: applied.previewModel,
           designTokensRawJson: JSON.stringify(applied.designTokens, null, 2),

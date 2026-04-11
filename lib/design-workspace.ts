@@ -346,6 +346,7 @@ export function createInitialWorkspace(): DesignWorkspace {
     designExtraction: design,
     designControls,
     promptKit,
+    baseDesignTokens: initialTokens,
     designTokens: applied.designTokens,
     previewModel: applied.previewModel,
     chatHistory: [],
@@ -398,6 +399,7 @@ export function mergeWorkspacePatch(
   | "designExtraction"
   | "designControls"
   | "promptKit"
+  | "baseDesignTokens"
   | "designTokens"
   | "previewModel"
   | "extractionRawJson"
@@ -417,8 +419,8 @@ export function mergeWorkspacePatch(
     : state.promptKit;
 
   const baseDesignTokens = patch.designTokens
-    ? normalizeDesignTokens({ ...state.designTokens, ...patch.designTokens }, state.designTokens)
-    : state.designTokens;
+    ? normalizeDesignTokens({ ...state.baseDesignTokens, ...patch.designTokens }, state.baseDesignTokens)
+    : state.baseDesignTokens;
 
   const basePreview = patch.previewModel
     ? {
@@ -433,6 +435,7 @@ export function mergeWorkspacePatch(
     designExtraction: mergedDesign,
     designControls: mergedControls,
     promptKit: mergedPromptKit,
+    baseDesignTokens,
     designTokens: withControls.designTokens,
     previewModel: withControls.previewModel,
     extractionRawJson: JSON.stringify(mergedDesign, null, 2),
