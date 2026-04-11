@@ -47,25 +47,22 @@ export default function DesignControlsPanel() {
   const showGuidance = useWorkspaceStore((store) => store.showGuidance);
 
   const [pending, setPending] = useState<DesignControls>(storeControls);
-  const [hasPending, setHasPending] = useState(false);
 
   // Sync pending state when store controls change externally (e.g. after extraction)
   useEffect(() => {
     setPending(storeControls);
-    setHasPending(false);
   }, [storeControls]);
 
+  const hasPending = (Object.keys(storeControls) as (keyof DesignControls)[]).some(
+    (key) => pending[key] !== storeControls[key]
+  );
+
   function updatePending<K extends keyof DesignControls>(key: K, value: DesignControls[K]) {
-    setPending((prev) => {
-      const next = { ...prev, [key]: value };
-      setHasPending(true);
-      return next;
-    });
+    setPending((prev) => ({ ...prev, [key]: value }));
   }
 
   function applyControls() {
     updateDesignControls(pending);
-    setHasPending(false);
   }
 
   return (

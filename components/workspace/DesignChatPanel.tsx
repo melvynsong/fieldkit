@@ -70,7 +70,7 @@ export default function DesignChatPanel() {
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Design Chat</h2>
         {showGuidance ? (
           <p className="mt-1 text-sm text-slate-600">
-            Ask the AI to refine your design — e.g. &quot;more premium&quot;, &quot;increase contrast&quot;, or &quot;make buttons more rounded&quot;.
+            Ask the AI to refine your design — e.g. “more premium”, “increase contrast”, or “make buttons more rounded”.
           </p>
         ) : null}
       </header>
