@@ -9,6 +9,7 @@ export default function DesignChatPanel() {
   const applyPatch = useWorkspaceStore((store) => store.applyPatch);
   const setUpdating = useWorkspaceStore((store) => store.setUpdating);
   const setError = useWorkspaceStore((store) => store.setError);
+  const showGuidance = useWorkspaceStore((store) => store.showGuidance);
 
   const [message, setMessage] = useState("");
 
@@ -67,9 +68,11 @@ export default function DesignChatPanel() {
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)] sm:p-5">
       <header className="mb-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Design Chat</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Ask for changes like “more premium”, “increase contrast”, or “make buttons more rounded”.
-        </p>
+        {showGuidance ? (
+          <p className="mt-1 text-sm text-slate-600">
+            Ask the AI to refine your design — e.g. “more premium”, “increase contrast”, or “make buttons more rounded”.
+          </p>
+        ) : null}
       </header>
 
       <div className="max-h-52 space-y-2 overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-3">

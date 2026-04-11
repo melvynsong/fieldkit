@@ -21,6 +21,7 @@ export default function ImageLibraryPanel() {
   const updateImageTag = useWorkspaceStore((store) => store.updateImageTag);
   const toggleColorReference = useWorkspaceStore((store) => store.toggleColorReference);
   const runExtraction = useWorkspaceStore((store) => store.runExtraction);
+  const showGuidance = useWorkspaceStore((store) => store.showGuidance);
 
   const colorReferenceCount = useMemo(
     () => state.images.filter((image) => image.useAsColorReference).length,
@@ -31,9 +32,11 @@ export default function ImageLibraryPanel() {
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)] sm:p-5">
       <header className="mb-4">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Images</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Upload multiple references, tag each image, and mark color sources.
-        </p>
+        {showGuidance ? (
+          <p className="mt-1 text-sm text-slate-600">
+            Upload multiple references, tag each image, and mark color sources. Then click <strong>Extract Design System</strong>.
+          </p>
+        ) : null}
       </header>
 
       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:bg-slate-100">

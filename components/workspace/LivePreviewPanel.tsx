@@ -69,6 +69,7 @@ function SectionCard({ label }: { label: string }) {
 export default function LivePreviewPanel() {
   const state = useWorkspaceStore((store) => store.state);
   const setPreviewViewport = useWorkspaceStore((store) => store.setPreviewViewport);
+  const showGuidance = useWorkspaceStore((store) => store.showGuidance);
 
   const isMobile = state.previewModel.viewport === "mobile";
   const navItems = state.designExtraction.navigation.items.length
@@ -96,7 +97,9 @@ export default function LivePreviewPanel() {
       <header className="mb-3 flex items-center justify-between gap-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Live Preview</h2>
-          <p className="mt-1 text-sm text-slate-600">Instantly synced with tokens + preview model.</p>
+          {showGuidance ? (
+            <p className="mt-1 text-sm text-slate-600">Updates instantly when you apply controls or editor changes.</p>
+          ) : null}
         </div>
 
         <div className="inline-flex rounded-full border border-slate-300 bg-slate-100 p-1 text-xs font-semibold">
