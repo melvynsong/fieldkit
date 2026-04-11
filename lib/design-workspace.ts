@@ -418,7 +418,7 @@ export function mergeWorkspacePatch(
     ? normalizePromptKit({ ...state.promptKit, ...patch.promptKit }, state.promptKit)
     : state.promptKit;
 
-  const baseDesignTokens = patch.designTokens
+  const updatedBaseTokens = patch.designTokens
     ? normalizeDesignTokens({ ...state.baseDesignTokens, ...patch.designTokens }, state.baseDesignTokens)
     : state.baseDesignTokens;
 
@@ -429,13 +429,13 @@ export function mergeWorkspacePatch(
       }
     : state.previewModel;
 
-  const withControls = applyDesignControls(baseDesignTokens, basePreview, mergedControls);
+  const withControls = applyDesignControls(updatedBaseTokens, basePreview, mergedControls);
 
   return {
     designExtraction: mergedDesign,
     designControls: mergedControls,
     promptKit: mergedPromptKit,
-    baseDesignTokens,
+    baseDesignTokens: updatedBaseTokens,
     designTokens: withControls.designTokens,
     previewModel: withControls.previewModel,
     extractionRawJson: JSON.stringify(mergedDesign, null, 2),
