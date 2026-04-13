@@ -1,6 +1,6 @@
 "use client";
 
-import BuildIteratePlaceholder from "@/components/BuildIteratePlaceholder";
+import BuildWorkspace from "@/components/BuildWorkspace";
 import DesignWorkspace from "@/components/DesignWorkspace";
 import FieldKitHero from "@/components/FieldKitHero";
 import ProblemDiscoveryStage from "@/components/ProblemDiscoveryStage";
@@ -19,7 +19,7 @@ function StagePanel({ stage }: { stage: WorkflowStage }) {
   }
 
   if (stage === "build-iterate") {
-    return <BuildIteratePlaceholder />;
+    return <BuildWorkspace />;
   }
 
   return <ScaleWorkspace />;

@@ -1,8 +1,12 @@
 "use client";
 
 import { create } from "zustand";
+import { applyBuildInteraction } from "@/lib/interaction-engine";
+import { generateBuildScreens } from "@/lib/screen-content-generator";
 import { generateScaleArtifacts as buildScaleArtifacts } from "@/lib/scale-generator";
 import type {
+  BuildScreen,
+  BuildScreenAction,
   BuildDesignControls,
   BuildDesignTokens,
   ChatMessage,
@@ -28,6 +32,11 @@ interface WorkflowStore {
   activeDesignCues: DesignCues;
   buildDesignControls: BuildDesignControls;
   buildDesignTokens: BuildDesignTokens;
+  buildScreens: BuildScreen[];
+  buildCurrentScreenIndex: number;
+  buildNavigationHistory: number[];
+  buildUiState: Record<string, boolean>;
+  buildAiHistory: string[];
   generatedScreens: ScreenGenerationResult | null;
   scaleArtifacts: ScaleArtifacts | null;
   selectedScreenId: string | null;
@@ -53,6 +62,11 @@ interface WorkflowStore {
   updateBuildDesignControls: (patch: Partial<BuildDesignControls>) => void;
   applyBuildDesignControls: () => void;
   resetBuildDesignControls: () => void;
+  initializeBuildWorkspace: () => void;
+  setBuildCurrentScreenIndex: (index: number) => void;
+  goToNextBuildScreen: () => void;
+  goToPreviousBuildScreen: () => void;
+  triggerBuildAction: (action: BuildScreenAction) => void;
   applyBuildChatPrompt: (message: string) => Promise<void>;
   setSelectedScreenId: (id: string | null) => void;
   setSolutionText: (value: string) => void;
@@ -268,52 +282,6 @@ function applyControlsToDesignSystem(
   };
 }
 
-interface BuildChatPatch {
-  designControls?: Partial<BuildDesignControls>;
-  designExtraction?: Partial<DesignSystem>;
-}
-
-function normalizeBuildChatPatch(raw: unknown): BuildChatPatch {
-  if (!raw || typeof raw !== "object") {
-    return {};
-  }
-
-  const source = raw as Record<string, unknown>;
-  const out: BuildChatPatch = {};
-
-  if (source.designControls && typeof source.designControls === "object") {
-    const controls = source.designControls as Record<string, unknown>;
-    out.designControls = {};
-
-    if (controls.appStyle === "transactional" || controls.appStyle === "media" || controls.appStyle === "hybrid") {
-      out.designControls.appStyle = controls.appStyle;
-    }
-    if (
-      controls.tone === "professional" ||
-      controls.tone === "playful" ||
-      controls.tone === "premium" ||
-      controls.tone === "friendly"
-    ) {
-      out.designControls.tone = controls.tone;
-    }
-    if (controls.density === "compact" || controls.density === "comfortable" || controls.density === "spacious") {
-      out.designControls.density = controls.density;
-    }
-    if (controls.emphasis === "content" || controls.emphasis === "actions" || controls.emphasis === "balanced") {
-      out.designControls.emphasis = controls.emphasis;
-    }
-    if (controls.visualWeight === "light" || controls.visualWeight === "balanced" || controls.visualWeight === "bold") {
-      out.designControls.visualWeight = controls.visualWeight;
-    }
-  }
-
-  if (source.designExtraction && typeof source.designExtraction === "object") {
-    out.designExtraction = source.designExtraction as Partial<DesignSystem>;
-  }
-
-  return out;
-}
-
 function traceGeneratedScreens(
   generated: ScreenGenerationResult,
   plannedScreens: PlannedScreen[]
@@ -379,6 +347,24 @@ function reEvaluatePlan(
   };
 }
 
+function hydrateBuildScreens(snapshot: {
+  generatedScreens: ScreenGenerationResult | null;
+  problemDiscovery: ProblemDiscovery | null;
+  solutionPlan: SolutionPlan;
+  designSystem: DesignSystem | null;
+  buildDesignControls: BuildDesignControls;
+  buildDesignTokens: BuildDesignTokens;
+}): BuildScreen[] {
+  return generateBuildScreens({
+    generatedScreens: snapshot.generatedScreens?.screens || [],
+    problemDiscovery: snapshot.problemDiscovery,
+    solutionPlan: snapshot.solutionPlan,
+    designSystem: snapshot.designSystem,
+    controls: snapshot.buildDesignControls,
+    tokens: snapshot.buildDesignTokens,
+  });
+}
+
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   currentStage: "problem-discovery",
   problemInput: initialProblemInput,
@@ -388,6 +374,11 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   activeDesignCues: defaultDesignCues(),
   buildDesignControls: defaultBuildDesignControls(),
   buildDesignTokens: buildDesignTokensFromControls(defaultBuildDesignControls()),
+  buildScreens: [],
+  buildCurrentScreenIndex: 0,
+  buildNavigationHistory: [],
+  buildUiState: {},
+  buildAiHistory: [],
   generatedScreens: null,
   scaleArtifacts: null,
   selectedScreenId: null,
@@ -506,11 +497,18 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set((state) => {
       const nextDesign = applyControlsToDesignSystem(state.designSystem, state.buildDesignControls);
       const { solutionPlan, generationReady } = reEvaluatePlan(state.solutionPlan, nextDesign);
+      const buildScreens = hydrateBuildScreens({
+        ...state,
+        solutionPlan,
+        designSystem: nextDesign,
+      });
 
       return {
         designSystem: nextDesign,
         activeDesignCues: buildDesignCues(nextDesign),
         buildDesignTokens: buildDesignTokensFromControls(state.buildDesignControls),
+        buildScreens,
+        buildCurrentScreenIndex: Math.min(state.buildCurrentScreenIndex, Math.max(buildScreens.length - 1, 0)),
         solutionPlan,
         generationReady,
         error: null,
@@ -524,6 +522,62 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       return {
         buildDesignControls: nextControls,
         buildDesignTokens: buildDesignTokensFromControls(nextControls),
+      };
+    });
+  },
+
+  initializeBuildWorkspace: () => {
+    set((state) => {
+      const buildScreens = hydrateBuildScreens(state);
+      return {
+        buildScreens,
+        buildCurrentScreenIndex: Math.min(state.buildCurrentScreenIndex, Math.max(buildScreens.length - 1, 0)),
+        buildNavigationHistory: [],
+        buildUiState: {},
+      };
+    });
+  },
+
+  setBuildCurrentScreenIndex: (index) => {
+    set((state) => ({
+      buildCurrentScreenIndex: Math.max(0, Math.min(index, Math.max(state.buildScreens.length - 1, 0))),
+    }));
+  },
+
+  goToNextBuildScreen: () => {
+    set((state) => ({
+      buildCurrentScreenIndex: Math.min(state.buildCurrentScreenIndex + 1, Math.max(state.buildScreens.length - 1, 0)),
+      buildNavigationHistory: [...state.buildNavigationHistory, state.buildCurrentScreenIndex],
+    }));
+  },
+
+  goToPreviousBuildScreen: () => {
+    set((state) => {
+      const fromHistory = state.buildNavigationHistory[state.buildNavigationHistory.length - 1];
+      const nextIndex = typeof fromHistory === "number"
+        ? fromHistory
+        : Math.max(state.buildCurrentScreenIndex - 1, 0);
+
+      return {
+        buildCurrentScreenIndex: nextIndex,
+        buildNavigationHistory: state.buildNavigationHistory.slice(0, -1),
+      };
+    });
+  },
+
+  triggerBuildAction: (action) => {
+    set((state) => {
+      const result = applyBuildInteraction(action, {
+        currentIndex: state.buildCurrentScreenIndex,
+        maxIndex: Math.max(state.buildScreens.length - 1, 0),
+        history: state.buildNavigationHistory,
+        uiState: state.buildUiState,
+      });
+
+      return {
+        buildCurrentScreenIndex: result.currentIndex,
+        buildNavigationHistory: result.history,
+        buildUiState: result.uiState,
       };
     });
   },
@@ -549,73 +603,50 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }));
 
     try {
-      const response = await fetch("/api/design-chat", {
+      const response = await fetch("/api/generate-screens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: trimmed,
-          workspace: {
-            designExtraction: snapshot.designSystem,
-            designControls: snapshot.buildDesignControls,
-            designTokens: snapshot.buildDesignTokens,
-            previewModel: {
-              selectedScreenId: snapshot.selectedScreenId,
-              screens: snapshot.generatedScreens.screens.map((screen) => ({
-                id: screen.id,
-                screenName: screen.screenName,
-                contentTypes: screen.contentTypes,
-              })),
-            },
-          },
+          problem: snapshot.problemDiscovery,
+          design: snapshot.designSystem,
+          plannedScreens: snapshot.solutionPlan.screens.map((screen) => ({
+            screenName: screen.screenName,
+            userAction: screen.userAction,
+            purpose: screen.problemResolution,
+          })),
+          chatInstruction: trimmed,
         }),
       });
 
-      const payload = (await response.json()) as {
-        ok: boolean;
-        error?: string;
-        patch?: unknown;
-      };
+      const payload = (await response.json()) as WorkflowApiResult<ScreenGenerationResult>;
 
       if (!response.ok || !payload.ok) {
         throw new Error(payload.error || "Build chat update failed.");
       }
 
-      const parsedPatch = normalizeBuildChatPatch(payload.patch);
+      const traced = traceGeneratedScreens(payload.data, snapshot.solutionPlan.screens);
 
       set((state) => {
-        const nextControls: BuildDesignControls = {
-          ...state.buildDesignControls,
-          ...(parsedPatch.designControls || {}),
-        };
-
-        const nextBaseDesign = applyControlsToDesignSystem(state.designSystem, nextControls);
-        const nextDesign = nextBaseDesign
-          ? {
-              ...nextBaseDesign,
-              ...(parsedPatch.designExtraction || {}),
-              tone: nextControls.appStyle,
-              density: nextControls.density,
-              spacing: nextControls.density,
-            }
-          : null;
-
-        const { solutionPlan, generationReady } = reEvaluatePlan(state.solutionPlan, nextDesign);
+        const buildScreens = hydrateBuildScreens({
+          ...state,
+          generatedScreens: traced,
+        });
 
         return {
-          buildDesignControls: nextControls,
-          buildDesignTokens: buildDesignTokensFromControls(nextControls),
-          designSystem: nextDesign,
-          activeDesignCues: buildDesignCues(nextDesign),
-          solutionPlan,
-          generationReady,
+          generatedScreens: traced,
+          buildScreens,
+          buildCurrentScreenIndex: Math.min(state.buildCurrentScreenIndex, Math.max(buildScreens.length - 1, 0)),
+          buildNavigationHistory: [],
           isApplyingBuildChat: false,
           error: null,
+          buildAiHistory: [...state.buildAiHistory, trimmed],
           chatHistory: [
             ...state.chatHistory,
             {
               id: uid(),
               role: "assistant",
-              content: "Applied chat updates to Build & Iterate controls and tokens.",
+              content: "Applied AI iteration to Stage 3 content and flow.",
             },
           ],
         };
@@ -930,6 +961,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
       set({
         generatedScreens: traced,
+        buildScreens: hydrateBuildScreens({
+          ...get(),
+          generatedScreens: traced,
+        }),
+        buildCurrentScreenIndex: 0,
+        buildNavigationHistory: [],
+        buildUiState: {},
         selectedScreenId: selectedId,
         isGeneratingScreens: false,
         error: null,
@@ -989,6 +1027,16 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           ...traced,
           screens: one,
         },
+        buildScreens: hydrateBuildScreens({
+          ...get(),
+          generatedScreens: {
+            ...traced,
+            screens: one,
+          },
+        }),
+        buildCurrentScreenIndex: 0,
+        buildNavigationHistory: [],
+        buildUiState: {},
         selectedScreenId: one[0]?.id ?? null,
         isGeneratingScreens: false,
         error: null,
@@ -1045,6 +1093,13 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
       set((state) => ({
         generatedScreens: traced,
+        buildScreens: hydrateBuildScreens({
+          ...state,
+          generatedScreens: traced,
+        }),
+        buildCurrentScreenIndex: 0,
+        buildNavigationHistory: [],
+        buildUiState: {},
         selectedScreenId: traced.screens[0]?.id ?? state.selectedScreenId,
         buildDesignControls: nextControls,
         buildDesignTokens: buildDesignTokensFromControls(nextControls),

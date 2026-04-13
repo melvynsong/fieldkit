@@ -131,6 +131,36 @@ export interface BuildDesignTokens {
   layoutRhythm: "dense" | "moderate" | "open";
 }
 
+export interface BuildScreenSection {
+  id: string;
+  heading: string;
+  body: string;
+  bullets: string[];
+  fieldLabel?: string;
+  fieldPlaceholder?: string;
+}
+
+export interface BuildScreenAction {
+  id: string;
+  label: string;
+  intent: "next" | "back" | "jump" | "toggle" | "confirm";
+  targetIndex?: number;
+  stateKey?: string;
+}
+
+export interface BuildScreen {
+  id: string;
+  sourceScreenId: string;
+  screenName: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  sections: BuildScreenSection[];
+  chips: string[];
+  primaryAction: BuildScreenAction;
+  secondaryActions: BuildScreenAction[];
+}
+
 export type WorkflowStage = "problem-discovery" | "design" | "build-iterate" | "scale";
 
 export interface ScaleTestCase {
