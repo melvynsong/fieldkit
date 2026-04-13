@@ -33,13 +33,15 @@ function CollapsibleSection({
 }
 
 export default function DesignWorkspace() {
+  const problemDiscovery = useWorkflowStore((state) => state.problemDiscovery);
   const solutionPlan = useWorkflowStore((state) => state.solutionPlan);
+  const generatedScreens = useWorkflowStore((state) => state.generatedScreens);
   const selectedScreenId = useWorkflowStore((state) => state.selectedScreenId);
   const setSelectedScreenId = useWorkflowStore((state) => state.setSelectedScreenId);
   const generateScreens = useWorkflowStore((state) => state.generateScreens);
   const isGeneratingScreens = useWorkflowStore((state) => state.isGeneratingScreens);
-  const generationReady = useWorkflowStore((state) => state.generationReady);
   const design = useWorkflowStore((state) => state.designSystem);
+  const canGenerateForStage3 = Boolean(problemDiscovery) && solutionPlan.status === "ready-for-generation";
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.08)] sm:p-5 lg:p-6">
@@ -70,14 +72,24 @@ export default function DesignWorkspace() {
             <button
               type="button"
               onClick={() => void generateScreens()}
-              disabled={!generationReady || isGeneratingScreens}
+              disabled={!canGenerateForStage3 || isGeneratingScreens}
               className="mt-3 w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {isGeneratingScreens ? "Generating..." : "Generate/Refresh Designed Screens"}
+              {isGeneratingScreens ? "Generating..." : "Generate Screens For Stage 3"}
             </button>
             <p className="mt-2 text-xs text-slate-500">
-              {design ? "Design extracted." : "Extract design references first."}
+              {design
+                ? "Using extracted design system."
+                : "No design extracted yet. Generation will use a sensible default style."}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Stage 3 readiness: Generated screens {generatedScreens?.screens.length || 0}
+            </p>
+            {!canGenerateForStage3 ? (
+              <p className="mt-1 text-xs text-amber-700">
+                Complete Stage 1 Solution Plan review first (status must be Ready for Generation).
+              </p>
+            ) : null}
           </section>
 
           <CollapsibleSection

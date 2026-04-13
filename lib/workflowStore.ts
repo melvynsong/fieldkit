@@ -223,6 +223,40 @@ function buildDesignTokensFromControls(controls: BuildDesignControls): BuildDesi
   };
 }
 
+function fallbackDesignSystemFromControls(controls: BuildDesignControls): DesignSystem {
+  const isMedia = controls.appStyle === "media";
+  const isTransactional = controls.appStyle === "transactional";
+
+  return {
+    theme: isMedia
+      ? "Content-led default"
+      : isTransactional
+      ? "Task-first default"
+      : "Balanced default",
+    colors: {
+      primary: isMedia ? "#0f4c81" : isTransactional ? "#1f3a5f" : "#2c4d8f",
+      secondary: "#d9e3f0",
+      accent: isMedia ? "#f97316" : "#3b82f6",
+      background: "#f8fafc",
+      surface: "#ffffff",
+      text: "#0f172a",
+    },
+    typography: {
+      style: controls.tone === "premium" ? "Refined sans-serif" : "Modern sans-serif",
+      scale: controls.density === "compact" ? "Compact scale" : controls.density === "spacious" ? "Expanded scale" : "Balanced scale",
+      weight: controls.visualWeight === "bold" ? "bold" : controls.visualWeight === "light" ? "normal" : "semibold",
+    },
+    spacing: controls.density,
+    density: controls.density,
+    tone: controls.appStyle,
+    layoutPatterns: [
+      controls.emphasis === "actions" ? "Action-focused hierarchy" : controls.emphasis === "content" ? "Content-led hierarchy" : "Balanced hierarchy",
+      controls.density === "compact" ? "Tight vertical rhythm" : controls.density === "spacious" ? "Open modular rhythm" : "Balanced modular rhythm",
+    ],
+    components: ["Card", "Top nav", "Button group"],
+  };
+}
+
 function applyControlsToDesignSystem(
   design: DesignSystem | null,
   controls: BuildDesignControls
@@ -924,11 +958,30 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
   },
 
   generateScreens: async () => {
-    const { problemDiscovery, designSystem, solutionPlan, generationReady } = get();
+    const { problemDiscovery, designSystem, solutionPlan, buildDesignControls } = get();
 
-    if (!problemDiscovery || !designSystem || !generationReady) {
-      set({ error: "Refine the Solution Plan and ensure design extraction is done first." });
+    if (!problemDiscovery) {
+      set({ error: "Complete Problem Discovery first." });
       return;
+    }
+
+    if (solutionPlan.status !== "ready-for-generation") {
+      set({ error: "Refine the Solution Plan before generating screens." });
+      return;
+    }
+
+    const effectiveDesign = designSystem || fallbackDesignSystemFromControls(buildDesignControls);
+
+    if (!designSystem) {
+      set((state) => {
+        const { solutionPlan: nextPlan, generationReady } = reEvaluatePlan(state.solutionPlan, effectiveDesign);
+        return {
+          designSystem: effectiveDesign,
+          activeDesignCues: buildDesignCues(effectiveDesign),
+          solutionPlan: nextPlan,
+          generationReady,
+        };
+      });
     }
 
     set({ isGeneratingScreens: true, error: null });
@@ -939,7 +992,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           problem: problemDiscovery,
-          design: designSystem,
+          design: effectiveDesign,
           plannedScreens: solutionPlan.screens.map((screen) => ({
             screenName: screen.screenName,
             userAction: screen.userAction,
