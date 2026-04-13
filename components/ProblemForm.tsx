@@ -77,7 +77,7 @@ export default function ProblemForm() {
         disabled={isLoading}
         className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
       >
-        {isLoading ? "Analyzing..." : "Analyze Problem"}
+        {isLoading ? "Analyzing & Generating..." : "Analyze & Generate Solution Plan"}
       </button>
     </section>
   );

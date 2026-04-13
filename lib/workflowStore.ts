@@ -835,7 +835,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           problemDiscovery: payload.data,
           solutionPlan,
           selectedScreenId: solutionPlan.screens[0]?.id ?? null,
-          currentStage: "design",
+          currentStage: "problem-discovery",
           generationReady,
           isAnalyzingProblem: false,
           error: null,

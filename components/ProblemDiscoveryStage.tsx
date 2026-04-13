@@ -1,39 +1,120 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import ProblemForm from "@/components/ProblemForm";
 import SolutionPlanEditor from "@/components/SolutionPlanEditor";
 import { useWorkflowStore } from "@/lib/workflowStore";
 
+function ListSection({ title, items }: { title: string; items: string[] }) {
+  return (
+    <article className="rounded-xl border border-slate-200 bg-white p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">{title}</p>
+      <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    </article>
+  );
+}
+
 export default function ProblemDiscoveryStage() {
   const discovery = useWorkflowStore((state) => state.problemDiscovery);
+  const isAnalyzingProblem = useWorkflowStore((state) => state.isAnalyzingProblem);
+  const setCurrentStage = useWorkflowStore((state) => state.setCurrentStage);
+  const resultsRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!discovery || isAnalyzingProblem) {
+      return;
+    }
+
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [discovery, isAnalyzingProblem]);
 
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-6">
       <header className="mb-4">
         <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Stage 1. Problem Discovery</h2>
         <p className="mt-1 text-sm text-slate-600">
-          Define the problem, solution, and screen-level responsibilities that drive downstream stages.
+          Define the problem, review the generated solution plan, and only proceed once the plan is refined.
         </p>
       </header>
 
       <ProblemForm />
-      <SolutionPlanEditor />
+
+      {isAnalyzingProblem ? (
+        <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <p className="text-sm font-semibold text-slate-700">Analyzing problem and generating solution plan...</p>
+          <p className="mt-1 text-xs text-slate-500">Please wait while Stage 1 outputs are prepared.</p>
+        </section>
+      ) : null}
 
       {discovery ? (
-        <section className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-            Stage 1 Output Snapshot
-          </h3>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
-            <article className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Real Problem</p>
-              <p className="mt-1 text-sm text-slate-700">{discovery.definition.realProblem}</p>
+        <section ref={resultsRef} className="mt-4 space-y-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+          <header>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">AI Problem Analysis</h3>
+          </header>
+
+          <article className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Core Problem</p>
+            <p className="mt-2 text-sm text-slate-700">{discovery.analysis.coreProblem}</p>
+          </article>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <ListSection title="Root Causes" items={discovery.analysis.rootCauses} />
+            <ListSection title="Solution Directions" items={discovery.analysis.solutionDirections} />
+            <ListSection title="Assumptions" items={discovery.analysis.assumptions} />
+            <ListSection title="Unknowns" items={discovery.analysis.unknowns} />
+          </div>
+
+          <header>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">Problem Definition</h3>
+          </header>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <article className="rounded-xl border border-slate-200 bg-white p-4 md:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Real Problem</p>
+              <p className="mt-2 text-sm text-slate-700">{discovery.definition.realProblem}</p>
             </article>
-            <article className="rounded-lg border border-slate-200 bg-white p-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Proposed Solution</p>
-              <p className="mt-1 text-sm text-slate-700">{discovery.hypothesis.solutionApproach}</p>
+            <article className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Who Is Affected</p>
+              <p className="mt-2 text-sm text-slate-700">{discovery.definition.affectedAndWhy}</p>
+            </article>
+            <article className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">If We Do Nothing</p>
+              <p className="mt-2 text-sm text-slate-700">{discovery.definition.inactionImpact}</p>
+            </article>
+            <article className="rounded-xl border border-slate-200 bg-white p-4 md:col-span-2">
+              <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Validation Approach</p>
+              <p className="mt-2 text-sm text-slate-700">{discovery.definition.simplestValidation}</p>
             </article>
           </div>
+
+          <SolutionPlanEditor />
+
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.11em] text-slate-500">Checkpoint Action</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Review and refine the solution plan before moving to Stage 2 Design.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setCurrentStage("problem-discovery")}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700"
+              >
+                Refine Solution
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentStage("design")}
+                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+              >
+                Proceed to Design
+              </button>
+            </div>
+          </section>
         </section>
       ) : null}
     </section>

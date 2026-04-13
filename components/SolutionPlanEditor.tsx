@@ -4,22 +4,19 @@ import { useWorkflowStore } from "@/lib/workflowStore";
 
 export default function SolutionPlanEditor() {
   const plan = useWorkflowStore((state) => state.solutionPlan);
-  const hasDesign = useWorkflowStore((state) => Boolean(state.designSystem));
   const generationReady = useWorkflowStore((state) => state.generationReady);
-  const isGenerating = useWorkflowStore((state) => state.isGeneratingScreens);
   const setSolutionText = useWorkflowStore((state) => state.setSolutionText);
   const setPlannedScreenCount = useWorkflowStore((state) => state.setPlannedScreenCount);
   const updatePlannedScreen = useWorkflowStore((state) => state.updatePlannedScreen);
   const addPlannedScreen = useWorkflowStore((state) => state.addPlannedScreen);
   const removePlannedScreen = useWorkflowStore((state) => state.removePlannedScreen);
   const movePlannedScreen = useWorkflowStore((state) => state.movePlannedScreen);
-  const generateSingleScreen = useWorkflowStore((state) => state.generateSingleScreen);
 
   return (
     <section className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">
-          2. Solution Plan
+          Solution Plan (Review Before Design)
         </h2>
         <span
           className={`rounded-full border px-3 py-1 text-xs font-semibold ${
@@ -133,17 +130,6 @@ export default function SolutionPlanEditor() {
                     className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
                   />
                 </label>
-
-                {hasDesign ? (
-                  <button
-                    type="button"
-                    onClick={() => void generateSingleScreen(screen.id)}
-                    disabled={isGenerating}
-                    className="mt-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:opacity-60"
-                  >
-                    {isGenerating ? "Generating..." : "Generate This Screen"}
-                  </button>
-                ) : null}
               </article>
             ))}
           </div>
