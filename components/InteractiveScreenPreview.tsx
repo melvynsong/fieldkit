@@ -2,71 +2,73 @@
 
 import { useState } from "react";
 import { useWorkflowStore } from "@/lib/workflowStore";
-import type { BuildScreen } from "@/types";
+import type { BuildScreen, BuildScreenAction } from "@/types";
 
 interface ScreenState {
-  activeStates: Record<string, boolean>;
   showAnnotations: boolean;
+  selectedItem: number | null;
+  formValue: string;
+  lastActionId: string | null;
 }
 
-const MOCK_CONTENT = {
-  hero: {
-    heading: "Discover Amazing Products",
-    subheading: "Find exactly what you're looking for",
-  },
-  form: {
-    fields: [
-      { label: "Search...", placeholder: "What are you looking for?" },
-      { label: "Category", placeholder: "Select category" },
-    ],
-  },
-  list: {
-    items: ["Premium Option", "Popular Choice", "Best Value", "New Arrival"],
-  },
-  actions: {
-    primary: ["Explore", "Get Started", "Continue", "Save", "Submit"],
-    secondary: ["Learn More", "View Details", "Dismiss", "Cancel", "Skip"],
-  },
-};
+interface ScreenEditState {
+  title?: string;
+  subtitle?: string;
+  primaryLabel?: string;
+  secondaryLabels?: Record<string, string>;
+  sectionHeadings?: Record<string, string>;
+  showForm?: boolean;
+  showList?: boolean;
+  showCards?: boolean;
+}
 
 function PrimaryActionButton({
-  action,
+  label,
   onClick,
-  isActive,
+  disabled,
+  isPressed,
 }: {
-  action: string;
+  label: string;
   onClick: () => void;
-  isActive: boolean;
+  disabled?: boolean;
+  isPressed: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
+      disabled={disabled}
       className={`flex-1 rounded-lg px-4 py-2.5 font-semibold transition ${
-        isActive
-          ? "bg-blue-600 text-white shadow-lg"
+        isPressed
+          ? "scale-[0.98] bg-blue-600 text-white shadow-lg"
           : "bg-slate-900 text-white hover:bg-slate-800"
       }`}
     >
-      {action}
+      {label}
     </button>
   );
 }
 
 function SecondaryActionButton({
-  action,
+  label,
   onClick,
+  isPressed,
 }: {
-  action: string;
-  onClick?: () => void;
+  label: string;
+  onClick: () => void;
+  isPressed: boolean;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="rounded-lg border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-50"
+      className={`rounded-lg border px-4 py-2.5 font-semibold transition ${
+        isPressed
+          ? "border-blue-400 bg-blue-50 text-blue-700"
+          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+      }`}
     >
-      {action}
+      {label}
     </button>
   );
 }
@@ -89,35 +91,6 @@ function HeroSection({
       )}
       <h1 className="text-4xl font-bold text-slate-900">{title}</h1>
       <p className="mt-2 text-lg text-slate-600">{subtitle}</p>
-    </section>
-  );
-}
-
-function FormSection({
-  showAnnotations,
-}: {
-  showAnnotations: boolean;
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-      {showAnnotations && (
-        <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-          Form Section
-        </span>
-      )}
-      {MOCK_CONTENT.form.fields.map((field, idx) => (
-        <div key={idx}>
-          <label className="block text-sm font-semibold text-slate-700">
-            {field.label}
-          </label>
-          <input
-            type="text"
-            placeholder={field.placeholder}
-            className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            readOnly
-          />
-        </div>
-      ))}
     </section>
   );
 }
@@ -182,54 +155,33 @@ function ChipSection({
   );
 }
 
-function CardGridSection({
-  count = 3,
-  showAnnotations,
-}: {
-  count?: number;
-  showAnnotations: boolean;
-}) {
-  return (
-    <section>
-      {showAnnotations && (
-        <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-          Card Grid
-        </span>
-      )}
-      <div className="mt-2 grid gap-3 md:grid-cols-3">
-        {Array.from({ length: count }).map((_, idx) => (
-          <div
-            key={idx}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:shadow-md"
-          >
-            <div className="aspect-square rounded-md bg-gradient-to-br from-slate-100 to-slate-200" />
-            <h4 className="mt-3 font-semibold text-slate-900">Item {idx + 1}</h4>
-            <p className="mt-1 text-xs text-slate-600">Meaningful description</p>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function InteractiveScreenPreview({
   screen,
   deviceMode = "mobile",
+  currentIndex,
+  onNavigate,
+  onTriggerAction,
+  actionTargetOverrides,
+  edit,
+  uiState,
 }: {
   screen: BuildScreen;
   deviceMode?: "mobile" | "desktop";
+  currentIndex: number;
+  onNavigate: (index: number) => void;
+  onTriggerAction: (action: BuildScreenAction) => void;
+  actionTargetOverrides?: Record<string, number>;
+  edit?: ScreenEditState;
+  uiState?: Record<string, boolean>;
 }) {
   const [state, setState] = useState<ScreenState>({
-    activeStates: {},
     showAnnotations: false,
+    selectedItem: null,
+    formValue: "",
+    lastActionId: null,
   });
 
   const designSystem = useWorkflowStore((state) => state.designSystem);
-  const setBuildCurrentScreenIndex = useWorkflowStore(
-    (state) => state.setBuildCurrentScreenIndex
-  );
-  const screens = useWorkflowStore((state) => state.buildScreens);
-  const currentIndex = useWorkflowStore((state) => state.buildCurrentScreenIndex);
 
   if (!designSystem) {
     return (
@@ -241,44 +193,53 @@ export default function InteractiveScreenPreview({
     );
   }
 
-  const handleAction = (action: string) => {
-    if (action.intent === "next") {
-      const nextIndex = Math.min(currentIndex + 1, screens.length - 1);
-      setBuildCurrentScreenIndex(nextIndex);
-    } else if (action.intent === "back") {
-      const prevIndex = Math.max(currentIndex - 1, 0);
-      setBuildCurrentScreenIndex(prevIndex);
-    } else if (action.intent === "jump" && action.targetIndex !== undefined) {
-      setBuildCurrentScreenIndex(action.targetIndex);
-    } else if (action.stateKey) {
-      setState((prev) => ({
-        ...prev,
-        activeStates: {
-          ...prev.activeStates,
-          [action.stateKey!]: !prev.activeStates[action.stateKey!],
-        },
-      }));
+  const hasForm = Boolean(screen.sections.find((section) => section.fieldPlaceholder));
+  const canSubmit = !hasForm || state.formValue.trim().length > 0;
+  const showForm = edit?.showForm ?? hasForm;
+  const showList = edit?.showList ?? true;
+  const showCards = edit?.showCards ?? true;
+
+  const title = edit?.title || screen.title;
+  const subtitle = edit?.subtitle || screen.subtitle;
+  const primaryLabel = edit?.primaryLabel || screen.primaryAction.label;
+
+  function handleAction(action: BuildScreenAction) {
+    setState((prev) => ({ ...prev, lastActionId: action.id }));
+
+    const mappedTarget = actionTargetOverrides?.[action.id];
+    if (typeof mappedTarget === "number") {
+      onNavigate(mappedTarget);
+      return;
     }
+
+    if (action.intent === "jump" && typeof action.targetIndex === "number") {
+      onNavigate(action.targetIndex);
+      return;
+    }
+
+    if ((action.intent === "next" || action.intent === "confirm") && !canSubmit) {
+      return;
+    }
+
+    onTriggerAction(action);
   };
 
   const containerClasses = deviceMode === "mobile"
     ? "max-w-md mx-auto rounded-3xl border-8 border-slate-900 shadow-2xl overflow-hidden bg-black"
     : "rounded-2xl border border-slate-300 overflow-hidden bg-white shadow-lg";
 
-  const contentClasses = deviceMode === "mobile" ? "bg-white" : "bg-white";
-
   return (
-    <div className={containerClasses}>
+    <div className={containerClasses} style={{ borderColor: designSystem.colors.secondary }}>
       {/* Device Frame Header for Mobile */}
       {deviceMode === "mobile" && (
         <div className="flex items-center justify-between bg-black px-4 py-1.5 text-white">
           <span className="text-xs font-semibold">9:41</span>
-          <span className="text-xs font-semibold">📶 🔋</span>
+          <span className="text-xs font-semibold">LTE 100%</span>
         </div>
       )}
 
       {/* Main Content */}
-      <div className={contentClasses}>
+      <div className="bg-white" style={{ backgroundColor: designSystem.colors.surface }}>
         {/* Annotation Toggle */}
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
           <h3 className="font-semibold text-slate-900">{screen.screenName}</h3>
@@ -296,16 +257,20 @@ export default function InteractiveScreenPreview({
                 : "text-slate-600 hover:bg-slate-100"
             }`}
           >
-            Annotations
+            {state.showAnnotations ? "Hide Design Annotations" : "Show Design Annotations"}
           </button>
         </div>
 
         {/* Screen Content */}
-        <div className={`space-y-4 p-4 md:p-6`}>
+        <div
+          key={`${screen.id}-${currentIndex}`}
+          className="space-y-4 p-4 transition-opacity duration-200 md:p-6"
+          style={{ color: designSystem.colors.text }}
+        >
           {/* Render based on screen sections */}
           <HeroSection
-            title={screen.title}
-            subtitle={screen.subtitle}
+            title={title}
+            subtitle={subtitle}
             showAnnotations={state.showAnnotations}
           />
 
@@ -316,40 +281,86 @@ export default function InteractiveScreenPreview({
           <ChipSection chips={screen.chips} showAnnotations={state.showAnnotations} />
 
           {/* Render sections */}
-          {screen.sections.some((s) => s.heading?.toLowerCase().includes("form")) && (
-            <FormSection showAnnotations={state.showAnnotations} />
+          {showForm && (
+            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
+              {state.showAnnotations ? (
+                <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
+                  Form Section
+                </span>
+              ) : null}
+              <label className="block text-sm font-semibold text-slate-700">
+                {screen.sections[0]?.fieldLabel || "Input"}
+              </label>
+              <input
+                type="text"
+                value={state.formValue}
+                onChange={(event) => setState((prev) => ({ ...prev, formValue: event.target.value }))}
+                placeholder={screen.sections[0]?.fieldPlaceholder || "Enter value"}
+                className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              />
+              <p className="text-xs text-slate-500">Form completion enables next-step actions.</p>
+            </section>
           )}
 
-          {screen.sections.some((s) => s.heading?.toLowerCase().includes("list")) && (
+          {showList && (
             <ListSection
-              title={screen.sections.find((s) =>
-                s.heading?.toLowerCase().includes("list")
-              )?.heading || "Items"}
-              items={MOCK_CONTENT.list.items}
+              title={edit?.sectionHeadings?.[screen.sections[0]?.id] || screen.sections[0]?.heading || "Options"}
+              items={screen.sections.flatMap((section) => section.bullets).slice(0, 4)}
               showAnnotations={state.showAnnotations}
             />
           )}
 
-          {screen.sections.some((s) => !s.heading?.toLowerCase().includes("form")) && (
-            <CardGridSection count={3} showAnnotations={state.showAnnotations} />
+          {showCards && (
+            <section>
+              {state.showAnnotations ? (
+                <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
+                  Card Grid
+                </span>
+              ) : null}
+              <div className="mt-2 grid gap-3 md:grid-cols-2">
+                {screen.sections.slice(0, 4).map((section, idx) => (
+                  <button
+                    key={section.id}
+                    type="button"
+                    onClick={() => setState((prev) => ({ ...prev, selectedItem: idx }))}
+                    className={`rounded-lg border bg-white p-4 text-left transition ${
+                      state.selectedItem === idx
+                        ? "border-blue-400 shadow-md"
+                        : "border-slate-200 shadow-sm hover:border-slate-300"
+                    }`}
+                  >
+                    <h4 className="font-semibold text-slate-900">
+                      {edit?.sectionHeadings?.[section.id] || section.heading}
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-600">{section.body}</p>
+                  </button>
+                ))}
+              </div>
+            </section>
           )}
+
+          {uiState?.confirmationComplete ? (
+            <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
+              Action confirmed. Prototype state updated.
+            </div>
+          ) : null}
 
           {/* Actions */}
           <div className="space-y-2 border-t border-slate-200 pt-4">
             <PrimaryActionButton
-              action={screen.primaryAction.label}
+              label={primaryLabel}
               onClick={() => handleAction(screen.primaryAction)}
-              isActive={
-                state.activeStates[screen.primaryAction.id] || false
-              }
+              isPressed={state.lastActionId === screen.primaryAction.id}
+              disabled={!canSubmit && (screen.primaryAction.intent === "next" || screen.primaryAction.intent === "confirm")}
             />
             {screen.secondaryActions.length > 0 && (
               <div className="flex gap-2">
                 {screen.secondaryActions.map((action) => (
                   <SecondaryActionButton
                     key={action.id}
-                    action={action.label}
+                    label={edit?.secondaryLabels?.[action.id] || action.label}
                     onClick={() => handleAction(action)}
+                    isPressed={state.lastActionId === action.id}
                   />
                 ))}
               </div>

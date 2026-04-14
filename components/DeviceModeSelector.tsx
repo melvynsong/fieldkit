@@ -30,7 +30,7 @@ export default function DeviceModeSelector({
               : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
           }`}
         >
-          📱 Mobile
+          Mobile
         </button>
         <button
           type="button"
@@ -42,7 +42,7 @@ export default function DeviceModeSelector({
               : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
           }`}
         >
-          🖥️ Desktop
+          Desktop
         </button>
       </div>
     </div>

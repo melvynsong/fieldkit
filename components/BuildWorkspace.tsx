@@ -6,7 +6,40 @@ import ScreenListNavigator from "@/components/ScreenListNavigator";
 import DeviceModeSelector from "@/components/DeviceModeSelector";
 import { BUILD_VERSION } from "@/lib/build-version";
 import { useWorkflowStore } from "@/lib/workflowStore";
-import type { BuildDesignControls } from "@/types";
+import type { BuildDesignControls, BuildScreen } from "@/types";
+
+interface ScreenEditState {
+  title?: string;
+  subtitle?: string;
+  primaryLabel?: string;
+  secondaryLabels?: Record<string, string>;
+  sectionHeadings?: Record<string, string>;
+  showForm?: boolean;
+  showList?: boolean;
+  showCards?: boolean;
+}
+
+function inferDeviceSupport(screen: BuildScreen | null): { mobile: boolean; desktop: boolean } {
+  if (!screen) {
+    return { mobile: true, desktop: true };
+  }
+
+  const source = `${screen.screenName} ${screen.title} ${screen.subtitle} ${screen.description}`.toLowerCase();
+  const mobileHints = ["mobile", "onboarding", "checkout", "search", "feed"];
+  const desktopHints = ["dashboard", "table", "admin", "analytics", "workspace"];
+  const hasMobile = mobileHints.some((hint) => source.includes(hint));
+  const hasDesktop = desktopHints.some((hint) => source.includes(hint));
+
+  if (hasMobile && !hasDesktop) {
+    return { mobile: true, desktop: false };
+  }
+
+  if (hasDesktop && !hasMobile) {
+    return { mobile: false, desktop: true };
+  }
+
+  return { mobile: true, desktop: true };
+}
 
 function ControlRow<T extends keyof BuildDesignControls>({
   label,
@@ -56,14 +89,100 @@ export default function BuildWorkspace() {
   const updateControls = useWorkflowStore((state) => state.updateBuildDesignControls);
   const applyControls = useWorkflowStore((state) => state.applyBuildDesignControls);
   const resetControls = useWorkflowStore((state) => state.resetBuildDesignControls);
+  const triggerBuildAction = useWorkflowStore((state) => state.triggerBuildAction);
+  const buildUiState = useWorkflowStore((state) => state.buildUiState);
+  const setBuildCurrentScreenIndex = useWorkflowStore((state) => state.setBuildCurrentScreenIndex);
 
   const [deviceMode, setDeviceMode] = useState<"mobile" | "desktop">("mobile");
+  const [flowMap, setFlowMap] = useState<Record<string, number>>({});
+  const [screenEdits, setScreenEdits] = useState<Record<string, ScreenEditState>>({});
+  const [isPlayFlowRunning, setIsPlayFlowRunning] = useState(false);
 
   useEffect(() => {
     initializeBuildWorkspace();
   }, [initializeBuildWorkspace]);
 
   const activeScreen = screens[currentIndex] || null;
+  const activeEdit = activeScreen ? screenEdits[activeScreen.id] || {} : {};
+  const support = inferDeviceSupport(activeScreen);
+  const effectiveDeviceMode = support[deviceMode] ? deviceMode : support.mobile ? "mobile" : "desktop";
+
+  useEffect(() => {
+    if (!isPlayFlowRunning || !screens.length) {
+      return;
+    }
+
+    if (currentIndex >= screens.length - 1) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setBuildCurrentScreenIndex(currentIndex + 1);
+    }, 850);
+
+    return () => window.clearTimeout(timer);
+  }, [isPlayFlowRunning, currentIndex, screens.length, setBuildCurrentScreenIndex]);
+
+  const activeActions = activeScreen
+    ? [activeScreen.primaryAction, ...activeScreen.secondaryActions]
+    : [];
+
+  function updateScreenEdit(next: Partial<ScreenEditState>) {
+    if (!activeScreen) return;
+    setScreenEdits((prev) => ({
+      ...prev,
+      [activeScreen.id]: {
+        ...prev[activeScreen.id],
+        ...next,
+      },
+    }));
+  }
+
+  function updateSecondaryLabel(actionId: string, value: string) {
+    if (!activeScreen) return;
+    const current = screenEdits[activeScreen.id] || {};
+    setScreenEdits((prev) => ({
+      ...prev,
+      [activeScreen.id]: {
+        ...current,
+        secondaryLabels: {
+          ...(current.secondaryLabels || {}),
+          [actionId]: value,
+        },
+      },
+    }));
+  }
+
+  function updateSectionHeading(sectionId: string, value: string) {
+    if (!activeScreen) return;
+    const current = screenEdits[activeScreen.id] || {};
+    setScreenEdits((prev) => ({
+      ...prev,
+      [activeScreen.id]: {
+        ...current,
+        sectionHeadings: {
+          ...(current.sectionHeadings || {}),
+          [sectionId]: value,
+        },
+      },
+    }));
+  }
+
+  function updateFlow(actionId: string, target: string) {
+    if (!target) {
+      setFlowMap((prev) => {
+        const next = { ...prev };
+        delete next[actionId];
+        return next;
+      });
+      return;
+    }
+
+    setFlowMap((prev) => ({
+      ...prev,
+      [actionId]: Number(target),
+    }));
+  }
 
   if (!screens.length) {
     return (
@@ -78,7 +197,7 @@ export default function BuildWorkspace() {
           </span>
         </div>
         <p className="mt-3 text-sm text-slate-600">
-          Generate screens in Stage 2 first. Stage 3 turns your design system and planned screens into a realistic, fully interactive product simulation where users can navigate, interact, and refine screens in real-time using AI.
+          Generate screens in Stage 2 first. Stage 3 turns planned screens into an interactive prototype flow.
         </p>
         <p className="mt-2 text-xs text-slate-500">
           Readiness: Generated screens {generatedScreens?.screens.length || 0} / Build screens {screens.length}
@@ -126,7 +245,13 @@ export default function BuildWorkspace() {
             <div className="w-full max-w-2xl">
               <InteractiveScreenPreview
                 screen={activeScreen}
-                deviceMode={deviceMode}
+                deviceMode={effectiveDeviceMode}
+                currentIndex={currentIndex}
+                onNavigate={setBuildCurrentScreenIndex}
+                onTriggerAction={triggerBuildAction}
+                actionTargetOverrides={flowMap}
+                edit={activeEdit}
+                uiState={buildUiState}
               />
             </div>
           ) : null}
@@ -134,10 +259,35 @@ export default function BuildWorkspace() {
           {/* Device Mode Selector Below Preview */}
           <div className="mt-6 w-full max-w-md">
             <DeviceModeSelector
-              value={deviceMode}
+              value={effectiveDeviceMode}
               onChange={setDeviceMode}
-              supports={{ mobile: true, desktop: true }}
+              supports={support}
             />
+          </div>
+
+          <div className="mt-3 flex w-full max-w-md gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setBuildCurrentScreenIndex(0);
+                setIsPlayFlowRunning((value) => !value);
+              }}
+              className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              {isPlayFlowRunning ? "Stop Flow" : "Play Flow"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const shareUrl = `${window.location.origin}/workflow?stage=build-iterate`;
+                if (navigator.clipboard?.writeText) {
+                  void navigator.clipboard.writeText(shareUrl);
+                }
+              }}
+              className="flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Share Prototype
+            </button>
           </div>
         </main>
 
@@ -219,31 +369,118 @@ export default function BuildWorkspace() {
           <details className="group">
             <summary className="cursor-pointer select-none rounded-lg bg-slate-50 px-3 py-2.5 font-semibold text-slate-700 hover:bg-slate-100">
               <span className="text-sm uppercase tracking-[0.08em]">
-                ⚙️ Advanced Options
+                Advanced Options
               </span>
             </summary>
             <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
-              <p className="text-xs text-slate-600">
-                Access flow diagrams, inline editing, and export options.
-              </p>
-              <button
-                type="button"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Show Flow Diagram
-              </button>
-              <button
-                type="button"
-                className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Enable Inline Editing
-              </button>
+              <p className="text-xs text-slate-600">Edit labels, section titles, layout blocks, and flow targets.</p>
+
+              {activeScreen ? (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Screen Title</label>
+                    <input
+                      value={activeEdit.title ?? activeScreen.title}
+                      onChange={(event) => updateScreenEdit({ title: event.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Subtitle</label>
+                    <input
+                      value={activeEdit.subtitle ?? activeScreen.subtitle}
+                      onChange={(event) => updateScreenEdit({ subtitle: event.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Primary Button Label</label>
+                    <input
+                      value={activeEdit.primaryLabel ?? activeScreen.primaryAction.label}
+                      onChange={(event) => updateScreenEdit({ primaryLabel: event.target.value })}
+                      className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                    />
+                  </div>
+
+                  {activeScreen.secondaryActions.map((action) => (
+                    <div key={action.id} className="space-y-1">
+                      <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Secondary Button</label>
+                      <input
+                        value={activeEdit.secondaryLabels?.[action.id] ?? action.label}
+                        onChange={(event) => updateSecondaryLabel(action.id, event.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                      />
+                    </div>
+                  ))}
+
+                  {activeScreen.sections.slice(0, 2).map((section) => (
+                    <div key={section.id} className="space-y-1">
+                      <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Section Title</label>
+                      <input
+                        value={activeEdit.sectionHeadings?.[section.id] ?? section.heading}
+                        onChange={(event) => updateSectionHeading(section.id, event.target.value)}
+                        className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-2 text-xs text-slate-700"
+                      />
+                    </div>
+                  ))}
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={activeEdit.showForm ?? true}
+                        onChange={(event) => updateScreenEdit({ showForm: event.target.checked })}
+                      />
+                      Form
+                    </label>
+                    <label className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={activeEdit.showList ?? true}
+                        onChange={(event) => updateScreenEdit({ showList: event.target.checked })}
+                      />
+                      List
+                    </label>
+                    <label className="flex items-center gap-1 rounded border border-slate-300 px-2 py-1 text-[11px] text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={activeEdit.showCards ?? true}
+                        onChange={(event) => updateScreenEdit({ showCards: event.target.checked })}
+                      />
+                      Cards
+                    </label>
+                  </div>
+
+                  <div className="space-y-1.5 border-t border-slate-200 pt-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Flow Targets</p>
+                    {activeActions.map((action) => (
+                      <div key={action.id} className="grid grid-cols-[1fr_130px] items-center gap-2">
+                        <p className="truncate text-[11px] text-slate-700">{action.label}</p>
+                        <select
+                          value={flowMap[action.id] ?? ""}
+                          onChange={(event) => updateFlow(action.id, event.target.value)}
+                          className="rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] text-slate-700"
+                        >
+                          <option value="">Default</option>
+                          {screens.map((screen, idx) => (
+                            <option key={screen.id} value={idx}>
+                              {screen.screenName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </div>
           </details>
 
           {/* Info Box */}
           <div className="rounded-lg bg-blue-50 border border-blue-200 px-3 py-3">
-            <p className="text-xs font-semibold text-blue-900">💡 Tip</p>
+            <p className="text-xs font-semibold text-blue-900">Tip</p>
             <p className="mt-1 text-xs text-blue-700">
               Use the toggle in each screen to show design annotations. Use AI Assistant dock to refine screens.
             </p>
