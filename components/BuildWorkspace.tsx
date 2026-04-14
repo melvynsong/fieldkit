@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import AIChatPanel from "@/components/AIChatPanel";
 import InteractiveScreen from "@/components/InteractiveScreen";
 import ScreenNavigator from "@/components/ScreenNavigator";
 import { BUILD_VERSION } from "@/lib/build-version";
@@ -171,7 +170,6 @@ export default function BuildWorkspace() {
             </p>
           </section>
 
-          <AIChatPanel />
         </aside>
 
         <section className="min-w-0 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">

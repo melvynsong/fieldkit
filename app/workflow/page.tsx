@@ -5,6 +5,7 @@ import DesignWorkspace from "@/components/DesignWorkspace";
 import FieldKitHero from "@/components/FieldKitHero";
 import ProblemDiscoveryStage from "@/components/ProblemDiscoveryStage";
 import ScaleWorkspace from "@/components/ScaleWorkspace";
+import StageAssistantDock from "@/components/StageAssistantDock";
 import StageNavigation from "@/components/StageNavigation";
 import { BUILD_VERSION } from "@/lib/build-version";
 import { useWorkflowStore } from "@/lib/workflowStore";
@@ -85,6 +86,7 @@ export default function WorkflowPage() {
           ) : null}
         </section>
       </div>
+      <StageAssistantDock />
     </main>
   );
 }
