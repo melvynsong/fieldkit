@@ -5,7 +5,6 @@ import { useWorkflowStore } from "@/lib/workflowStore";
 import type { BuildScreen, BuildScreenAction } from "@/types";
 
 interface ScreenState {
-  showAnnotations: boolean;
   selectedItem: number | null;
   formValue: string;
   lastActionId: string | null;
@@ -127,32 +126,19 @@ function ListSection({
   );
 }
 
-function ChipSection({
-  chips,
-  showAnnotations,
-}: {
-  chips: string[];
-  showAnnotations: boolean;
-}) {
-  if (!chips.length) return null;
+function cleanDisplayText(value: string): string {
+  const cleaned = value
+    .replace(/^(User intent|Outcome target|Flow context):\s*/i, "")
+    .replace(/^This area helps users\s*/i, "")
+    .replace(/while staying aligned with:.*/i, "")
+    .replace(/with\s+.*emphasis\.?/i, "")
+    .trim();
 
-  return (
-    <section className="flex flex-wrap gap-2">
-      {showAnnotations && (
-        <span className="w-full rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-          Tags/Context
-        </span>
-      )}
-      {chips.map((chip, idx) => (
-        <span
-          key={idx}
-          className="rounded-full border border-slate-300 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700"
-        >
-          {chip}
-        </span>
-      ))}
-    </section>
-  );
+  if (/^step\s+\d+\s+of\s+\d+/i.test(cleaned)) {
+    return "";
+  }
+
+  return cleaned;
 }
 
 export default function InteractiveScreenPreview({
@@ -164,6 +150,7 @@ export default function InteractiveScreenPreview({
   actionTargetOverrides,
   edit,
   uiState,
+  showAnnotations = false,
 }: {
   screen: BuildScreen;
   deviceMode?: "mobile" | "desktop";
@@ -173,9 +160,9 @@ export default function InteractiveScreenPreview({
   actionTargetOverrides?: Record<string, number>;
   edit?: ScreenEditState;
   uiState?: Record<string, boolean>;
+  showAnnotations?: boolean;
 }) {
   const [state, setState] = useState<ScreenState>({
-    showAnnotations: false,
     selectedItem: null,
     formValue: "",
     lastActionId: null,
@@ -202,6 +189,11 @@ export default function InteractiveScreenPreview({
   const title = edit?.title || screen.title;
   const subtitle = edit?.subtitle || screen.subtitle;
   const primaryLabel = edit?.primaryLabel || screen.primaryAction.label;
+  const listItems = screen.sections
+    .flatMap((section) => section.bullets)
+    .map(cleanDisplayText)
+    .filter(Boolean)
+    .slice(0, 4);
 
   function handleAction(action: BuildScreenAction) {
     setState((prev) => ({ ...prev, lastActionId: action.id }));
@@ -240,25 +232,9 @@ export default function InteractiveScreenPreview({
 
       {/* Main Content */}
       <div className="bg-white" style={{ backgroundColor: designSystem.colors.surface }}>
-        {/* Annotation Toggle */}
         <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
           <h3 className="font-semibold text-slate-900">{screen.screenName}</h3>
-          <button
-            type="button"
-            onClick={() =>
-              setState((prev) => ({
-                ...prev,
-                showAnnotations: !prev.showAnnotations,
-              }))
-            }
-            className={`text-xs font-semibold px-2 py-1 rounded transition ${
-              state.showAnnotations
-                ? "bg-yellow-100 text-yellow-700"
-                : "text-slate-600 hover:bg-slate-100"
-            }`}
-          >
-            {state.showAnnotations ? "Hide Design Annotations" : "Show Design Annotations"}
-          </button>
+          <span className="text-xs font-semibold text-slate-500">Prototype</span>
         </div>
 
         {/* Screen Content */}
@@ -271,19 +247,13 @@ export default function InteractiveScreenPreview({
           <HeroSection
             title={title}
             subtitle={subtitle}
-            showAnnotations={state.showAnnotations}
+            showAnnotations={showAnnotations}
           />
-
-          {screen.description && (
-            <p className="text-sm text-slate-600">{screen.description}</p>
-          )}
-
-          <ChipSection chips={screen.chips} showAnnotations={state.showAnnotations} />
 
           {/* Render sections */}
           {showForm && (
             <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-              {state.showAnnotations ? (
+              {showAnnotations ? (
                 <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
                   Form Section
                 </span>
@@ -298,21 +268,20 @@ export default function InteractiveScreenPreview({
                 placeholder={screen.sections[0]?.fieldPlaceholder || "Enter value"}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
-              <p className="text-xs text-slate-500">Form completion enables next-step actions.</p>
             </section>
           )}
 
           {showList && (
             <ListSection
               title={edit?.sectionHeadings?.[screen.sections[0]?.id] || screen.sections[0]?.heading || "Options"}
-              items={screen.sections.flatMap((section) => section.bullets).slice(0, 4)}
-              showAnnotations={state.showAnnotations}
+              items={listItems.length ? listItems : ["Top picks", "Recently viewed", "Recommended", "Saved for later"]}
+              showAnnotations={showAnnotations}
             />
           )}
 
           {showCards && (
             <section>
-              {state.showAnnotations ? (
+              {showAnnotations ? (
                 <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
                   Card Grid
                 </span>
@@ -332,7 +301,7 @@ export default function InteractiveScreenPreview({
                     <h4 className="font-semibold text-slate-900">
                       {edit?.sectionHeadings?.[section.id] || section.heading}
                     </h4>
-                    <p className="mt-1 text-xs text-slate-600">{section.body}</p>
+                    <p className="mt-1 text-xs text-slate-600">{cleanDisplayText(section.body) || "Open to view more details"}</p>
                   </button>
                 ))}
               </div>

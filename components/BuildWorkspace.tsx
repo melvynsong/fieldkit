@@ -97,6 +97,8 @@ export default function BuildWorkspace() {
   const [flowMap, setFlowMap] = useState<Record<string, number>>({});
   const [screenEdits, setScreenEdits] = useState<Record<string, ScreenEditState>>({});
   const [isPlayFlowRunning, setIsPlayFlowRunning] = useState(false);
+  const [showDesignInsights, setShowDesignInsights] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(false);
 
   useEffect(() => {
     initializeBuildWorkspace();
@@ -252,6 +254,7 @@ export default function BuildWorkspace() {
                 actionTargetOverrides={flowMap}
                 edit={activeEdit}
                 uiState={buildUiState}
+                showAnnotations={showAnnotations}
               />
             </div>
           ) : null}
@@ -289,10 +292,54 @@ export default function BuildWorkspace() {
               Share Prototype
             </button>
           </div>
+
         </main>
 
         {/* RIGHT: Controls Panel */}
         <aside className="border-l border-slate-200 bg-white p-4 space-y-4 overflow-y-auto max-h-[700px]">
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">View Modes</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDesignInsights((value) => !value)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  showDesignInsights
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {showDesignInsights ? "Hide Design Insights" : "Show Design Insights"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAnnotations((value) => !value)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  showAnnotations
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {showAnnotations ? "Hide Annotations" : "Show Annotations"}
+              </button>
+            </div>
+          </div>
+
+          {showDesignInsights && activeScreen ? (
+            <div className="rounded-lg border border-slate-300 bg-white p-3">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Design Insights</p>
+              <div className="mt-2 space-y-2 text-xs text-slate-700">
+                <p><span className="font-semibold text-slate-900">Tone:</span> {controls.tone}</p>
+                <p><span className="font-semibold text-slate-900">Style:</span> {controls.appStyle}</p>
+                <p><span className="font-semibold text-slate-900">Density:</span> {controls.density}</p>
+                <p><span className="font-semibold text-slate-900">Rhythm:</span> {tokens.layoutRhythm}</p>
+                <p><span className="font-semibold text-slate-900">Design reasoning:</span> {activeScreen.description}</p>
+                <p><span className="font-semibold text-slate-900">Screen contribution:</span> {activeScreen.subtitle}</p>
+                <p><span className="font-semibold text-slate-900">Metadata:</span> {activeScreen.chips.join(" • ")}</p>
+              </div>
+            </div>
+          ) : null}
+
           <div className="space-y-3">
             <h3 className="text-sm font-semibold uppercase tracking-[0.08em] text-slate-700">
               Design Controls
@@ -355,14 +402,6 @@ export default function BuildWorkspace() {
               </button>
             </div>
 
-            <div className="rounded-lg bg-slate-50 px-3 py-2">
-              <p className="text-xs font-semibold text-slate-600 uppercase tracking-[0.08em]">
-                Active Tokens
-              </p>
-              <p className="mt-1 text-xs text-slate-600">
-                {tokens.typographyPreset} • {tokens.layoutRhythm} • {tokens.hierarchy}
-              </p>
-            </div>
           </div>
 
           {/* Advanced Options */}
