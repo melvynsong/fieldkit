@@ -21,6 +21,47 @@ interface ScreenEditState {
   showCards?: boolean;
 }
 
+type ScreenDomain = "commerce" | "booking" | "food" | "finance" | "workspace" | "general";
+
+function inferDomain(screen: BuildScreen): ScreenDomain {
+  const source = `${screen.screenName} ${screen.title} ${screen.subtitle}`.toLowerCase();
+
+  if (/menu|order|restaurant|dish|delivery/.test(source)) return "food";
+  if (/hotel|trip|stay|flight|booking|reservation/.test(source)) return "booking";
+  if (/cart|checkout|shop|product|catalog|store/.test(source)) return "commerce";
+  if (/wallet|payment|invoice|billing|finance|subscription/.test(source)) return "finance";
+  if (/workspace|dashboard|project|task|team|admin/.test(source)) return "workspace";
+
+  return "general";
+}
+
+function domainListItems(domain: ScreenDomain): string[] {
+  if (domain === "food") return ["Popular near you", "Chef specials", "Fastest delivery", "Best value combos"];
+  if (domain === "booking") return ["Top-rated stays", "Free cancellation", "Great for families", "Last-minute deals"];
+  if (domain === "commerce") return ["Best sellers", "Trending now", "New arrivals", "Saved for later"];
+  if (domain === "finance") return ["Recent payments", "Upcoming bills", "Spending alerts", "Savings progress"];
+  if (domain === "workspace") return ["Assigned to you", "Due this week", "Blocked tasks", "Recently updated"];
+  return ["Top picks", "Recently viewed", "Recommended", "Saved for later"];
+}
+
+function domainCardSubtitle(domain: ScreenDomain): string {
+  if (domain === "food") return "Ready in 20-30 min";
+  if (domain === "booking") return "Instant confirmation available";
+  if (domain === "commerce") return "In stock and ready to ship";
+  if (domain === "finance") return "Updated a few seconds ago";
+  if (domain === "workspace") return "Synced with your latest updates";
+  return "Open to view more details";
+}
+
+function domainInputLabel(domain: ScreenDomain): string {
+  if (domain === "food") return "Search dishes or restaurants";
+  if (domain === "booking") return "Destination";
+  if (domain === "commerce") return "Search products";
+  if (domain === "finance") return "Amount";
+  if (domain === "workspace") return "Task or project";
+  return "Input";
+}
+
 function PrimaryActionButton({
   label,
   onClick,
@@ -189,6 +230,7 @@ export default function InteractiveScreenPreview({
   const title = edit?.title || screen.title;
   const subtitle = edit?.subtitle || screen.subtitle;
   const primaryLabel = edit?.primaryLabel || screen.primaryAction.label;
+  const domain = inferDomain(screen);
   const listItems = screen.sections
     .flatMap((section) => section.bullets)
     .map(cleanDisplayText)
@@ -259,13 +301,13 @@ export default function InteractiveScreenPreview({
                 </span>
               ) : null}
               <label className="block text-sm font-semibold text-slate-700">
-                {screen.sections[0]?.fieldLabel || "Input"}
+                {screen.sections[0]?.fieldLabel || domainInputLabel(domain)}
               </label>
               <input
                 type="text"
                 value={state.formValue}
                 onChange={(event) => setState((prev) => ({ ...prev, formValue: event.target.value }))}
-                placeholder={screen.sections[0]?.fieldPlaceholder || "Enter value"}
+                placeholder={screen.sections[0]?.fieldPlaceholder || `Type ${domainInputLabel(domain).toLowerCase()}...`}
                 className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
               />
             </section>
@@ -274,7 +316,7 @@ export default function InteractiveScreenPreview({
           {showList && (
             <ListSection
               title={edit?.sectionHeadings?.[screen.sections[0]?.id] || screen.sections[0]?.heading || "Options"}
-              items={listItems.length ? listItems : ["Top picks", "Recently viewed", "Recommended", "Saved for later"]}
+              items={listItems.length ? listItems : domainListItems(domain)}
               showAnnotations={showAnnotations}
             />
           )}
@@ -301,7 +343,7 @@ export default function InteractiveScreenPreview({
                     <h4 className="font-semibold text-slate-900">
                       {edit?.sectionHeadings?.[section.id] || section.heading}
                     </h4>
-                    <p className="mt-1 text-xs text-slate-600">{cleanDisplayText(section.body) || "Open to view more details"}</p>
+                    <p className="mt-1 text-xs text-slate-600">{cleanDisplayText(section.body) || domainCardSubtitle(domain)}</p>
                   </button>
                 ))}
               </div>
