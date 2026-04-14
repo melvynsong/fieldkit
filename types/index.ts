@@ -198,3 +198,171 @@ export interface ScaleArtifacts {
   contextSummary: string;
   epics: ScaleEpic[];
 }
+
+// ============================================================================
+// ENHANCED STAGE 3 TYPES (Live Prototype Builder)
+// ============================================================================
+
+export type UIComponentType =
+  | "hero"
+  | "form"
+  | "list"
+  | "cards"
+  | "modal"
+  | "drawer"
+  | "header"
+  | "footer"
+  | "navigation"
+  | "empty-state"
+  | "loading-state"
+  | "error-state"
+  | "success-state";
+
+export type InteractionIntent =
+  | "navigate"
+  | "submit"
+  | "mutate"
+  | "open_modal"
+  | "open_drawer"
+  | "close_modal"
+  | "close_drawer"
+  | "back"
+  | "confirm"
+  | "cancel"
+  | "toggle";
+
+export type UIState = "empty" | "loading" | "error" | "success" | "validation" | "default";
+
+export interface InteractionAction {
+  id: string;
+  label: string;
+  intent: InteractionIntent;
+  targetScreenId?: string;
+  feedback?: {
+    type: "loading" | "success" | "error" | "toast";
+    message?: string;
+  };
+  nextState?: UIState;
+}
+
+export interface FormField {
+  id: string;
+  name: string;
+  type: "text" | "email" | "password" | "number" | "date" | "select" | "textarea" | "checkbox" | "radio";
+  label: string;
+  placeholder?: string;
+  helperText?: string;
+  required?: boolean;
+  options?: Array<{ label: string; value: string }>;
+  defaultValue?: string;
+  validation?: {
+    pattern?: string;
+    minLength?: number;
+    maxLength?: number;
+    message?: string;
+  };
+}
+
+export interface UIComponent {
+  id: string;
+  type: UIComponentType;
+  title?: string;
+  subtitle?: string;
+  content?: string;
+  children?: UIComponent[];
+  fields?: FormField[];
+  actions?: InteractionAction[];
+  items?: Array<{
+    id: string;
+    title: string;
+    subtitle?: string;
+    icon?: string;
+    metadata?: string;
+  }>;
+  state?: UIState;
+  emptyStateContent?: {
+    title: string;
+    description: string;
+    action?: InteractionAction;
+  };
+  loadingContent?: {
+    message?: string;
+    skeletonCount?: number;
+  };
+  errorContent?: {
+    title: string;
+    message: string;
+    action?: InteractionAction;
+  };
+  successContent?: {
+    title: string;
+    message: string;
+  };
+}
+
+export interface ScreenRationale {
+  whyThisScreen: string;
+  userBenefit: string;
+  designDecisions: string[];
+  contentIntent: string;
+}
+
+export interface EnhancedBuildScreen {
+  id: string;
+  sourceScreenId: string;
+  screenName: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  purpose: string;
+  components: UIComponent[];
+  interactions: Record<string, InteractionAction>;
+  rationale?: ScreenRationale;
+  uiState?: UIState;
+  mockData?: Record<string, unknown>;
+  metadata?: {
+    index: number;
+    total: number;
+    domain?: string;
+  };
+  // Legacy support
+  sections?: Array<{ id: string; heading: string; body: string; bullets: string[] }>;
+  chips?: string[];
+  primaryAction?: BuildScreenAction;
+  secondaryActions?: BuildScreenAction[];
+}
+
+export interface SessionMockData {
+  user?: {
+    id?: string;
+    name?: string;
+    email?: string;
+    avatar?: string;
+    role?: string;
+  };
+  organization?: {
+    id?: string;
+    name?: string;
+    logo?: string;
+  };
+  items?: Array<Record<string, unknown>>;
+  categories?: string[];
+  tags?: string[];
+  notifications?: Array<{ id: string; message: string; type: "info" | "success" | "error" | "warning" }>;
+  [key: string]: unknown;
+}
+
+export interface Stage3SessionState {
+  sessionId: string;
+  createdAt: number;
+  lastModified: number;
+  screens: EnhancedBuildScreen[];
+  currentScreenIndex: number;
+  mockData: SessionMockData;
+  draftEdits: Record<string, Partial<EnhancedBuildScreen>>;
+  navigationHistory: number[];
+  uiPreferences: {
+    showRationale: boolean;
+    showAnnotations: boolean;
+  };
+}

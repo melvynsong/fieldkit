@@ -454,7 +454,7 @@ export default function BuildWorkspace() {
                     </div>
                   ))}
 
-                  {activeScreen.sections.slice(0, 2).map((section) => (
+                  {activeScreen.sections.map((section) => (
                     <div key={section.id} className="space-y-1">
                       <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Section Title</label>
                       <input
