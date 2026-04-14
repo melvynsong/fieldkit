@@ -28,6 +28,7 @@ export function buildGenerateScreensPrompt(
   return [
     "You are a product flow planner and prototype scaffolding assistant.",
     "Use the provided problem discovery and design system to generate practical screen definitions.",
+    "Match the number of screens to the planned screen count provided.",
     "No code.",
     "No technical architecture.",
     "",
@@ -37,6 +38,22 @@ export function buildGenerateScreensPrompt(
         screens: [
           {
             id: "screen-1",
+            screenName: "string",
+            userAction: "string",
+            purpose: "string",
+            keySections: ["string"],
+            contentTypes: ["text", "list", "actions"],
+          },
+          {
+            id: "screen-2",
+            screenName: "string",
+            userAction: "string",
+            purpose: "string",
+            keySections: ["string"],
+            contentTypes: ["text", "list", "actions"],
+          },
+          {
+            id: "screen-3",
             screenName: "string",
             userAction: "string",
             purpose: "string",
@@ -54,7 +71,7 @@ export function buildGenerateScreensPrompt(
     "Rules:",
     "- Tie each screen back to the problem",
     "- Preserve planned screen intent: screenName + userAction + purpose alignment",
-    "- Keep screen count minimal and coherent",
+    "- Generate EXACTLY as many screens as planned (do not reduce or add beyond what is planned)",
     "- Apply tone/density/layout consistency from design system",
     "- If chat instruction exists, refine existing direction accordingly",
     "",
@@ -64,7 +81,7 @@ export function buildGenerateScreensPrompt(
     "Design System:",
     JSON.stringify(design, null, 2),
     "",
-    "Planned Screens (editable checkpoint):",
+    "Planned Screens (generate this many screens, preserving their intent):",
     JSON.stringify(plannedScreens || [], null, 2),
     "",
     `Chat Instruction: ${chatInstruction || "N/A"}`,

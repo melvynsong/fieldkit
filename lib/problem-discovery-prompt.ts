@@ -22,7 +22,7 @@ export function buildProblemDiscoveryPrompt(input: ProblemInput): string {
     "",
     "3. Solution Hypothesis (B)",
     "a. Solution Approach (paragraph): high-level approach + user benefit only",
-    "b. Number of Screens: minimum required",
+    "b. Number of Screens: exactly how many screens this solution requires (no arbitrary limit)",
     "c. Screen Breakdown for each screen:",
     "- Screen Name",
     "- User Action",
@@ -36,6 +36,8 @@ export function buildProblemDiscoveryPrompt(input: ProblemInput): string {
     "- No technical architecture",
     "- Stay structured and concise",
     "- Tie everything back to the problem",
+    "- Generate as many screens as the solution genuinely requires (could be 1-10+)",
+    "- Screen count should map directly to solution complexity, not be artificially minimized",
     "",
     "Return strict JSON only with this schema:",
     JSON.stringify(
@@ -55,12 +57,22 @@ export function buildProblemDiscoveryPrompt(input: ProblemInput): string {
         },
         hypothesis: {
           solutionApproach: "string",
-          numberOfScreens: 2,
+          numberOfScreens: "integer (the count determined by the solution, not a fixed number)",
           screenBreakdown: [
             {
-              screenName: "string",
-              userAction: "string",
-              problemResolution: "string",
+              screenName: "Screen 1 name",
+              userAction: "User action on this screen",
+              problemResolution: "How this screen solves part of the problem",
+            },
+            {
+              screenName: "Screen 2 name",
+              userAction: "User action on this screen",
+              problemResolution: "How this screen solves part of the problem",
+            },
+            {
+              screenName: "Screen 3 name",
+              userAction: "User action on this screen",
+              problemResolution: "How this screen solves part of the problem",
             },
           ],
         },
