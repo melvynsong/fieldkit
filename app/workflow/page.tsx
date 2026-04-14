@@ -38,12 +38,6 @@ export default function WorkflowPage() {
     "scale",
   ];
   const stageIndex = stageOrder.indexOf(currentStage);
-  const simpleStageFlow: Array<{ id: WorkflowStage; label: string }> = [
-    { id: "problem-discovery", label: "Stage 1: Problem Discovery" },
-    { id: "design", label: "Stage 2: Design" },
-    { id: "build-iterate", label: "Stage 3: Build & Iterate" },
-    { id: "scale", label: "Stage 4: Scale" },
-  ];
 
   return (
     <main className="relative flex-1 bg-slate-100/60 px-4 py-8 sm:px-6 lg:px-10">
@@ -57,28 +51,7 @@ export default function WorkflowPage() {
               Build {BUILD_VERSION}
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600">
-            Problem Discovery -&gt; Design -&gt; Build &amp; Iterate -&gt; Scale
-          </p>
-
-          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-            {simpleStageFlow.map((stage, index) => (
-              <div key={stage.id} className="flex items-center gap-2">
-                <span
-                  className={`rounded-full border px-2.5 py-1 font-semibold ${
-                    currentStage === stage.id
-                      ? "border-slate-900 bg-slate-900 text-white"
-                      : "border-slate-300 bg-slate-50 text-slate-600"
-                  }`}
-                >
-                  {stage.label}
-                </span>
-                {index < simpleStageFlow.length - 1 ? <span className="text-slate-400">-&gt;</span> : null}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 space-y-4">
+          <div className="mt-4 space-y-4">
             <StageNavigation />
             <StagePanel stage={currentStage} />
           </div>
