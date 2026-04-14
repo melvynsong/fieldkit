@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { applyBuildInteraction } from "@/lib/interaction-engine";
 import { generateBuildScreens } from "@/lib/screen-content-generator";
 import { generateScaleArtifacts as buildScaleArtifacts } from "@/lib/scale-generator";
+import { enhanceBuildScreen } from "@/lib/screen-enhancement";
 import type {
   BuildScreen,
   BuildScreenAction,
@@ -12,6 +13,7 @@ import type {
   ChatMessage,
   DesignCues,
   DesignSystem,
+  EnhancedBuildScreen,
   GeneratedScreen,
   PlannedScreen,
   ProblemDiscovery,
@@ -397,6 +399,16 @@ function hydrateBuildScreens(snapshot: {
     controls: snapshot.buildDesignControls,
     tokens: snapshot.buildDesignTokens,
   });
+}
+
+/**
+ * Convert legacy BuildScreen[] to enhanced EnhancedBuildScreen[] format
+ * Transforms generic descriptions into structured UI components
+ */
+function enhanceBuildScreens(screens: BuildScreen[]): EnhancedBuildScreen[] {
+  return screens.map((screen, index) =>
+    enhanceBuildScreen(screen, index, screens.length)
+  );
 }
 
 export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
