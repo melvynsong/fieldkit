@@ -11,7 +11,6 @@ export default function HeroSection({ scrollTargetId }: HeroSectionProps) {
       <div className="pointer-events-none absolute -bottom-24 -left-12 h-72 w-72 rounded-full bg-emerald-100/40 blur-3xl" />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">FieldKit Workflow</p>
         <h1 className="mt-5 text-balance text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl lg:text-6xl">
           <span className="rounded-md bg-amber-200/65 px-2 py-1">Prototype on the fly.</span>{" "}
           Get real <span className="rounded-md bg-amber-200/65 px-2 py-1">user feedback</span> immediately.
