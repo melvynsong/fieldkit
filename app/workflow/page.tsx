@@ -69,14 +69,23 @@ export default function WorkflowPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.1em] text-gov-muted">
               Stage {stageIndex + 1} of {stageOrder.length}
             </p>
-            <button
-              type="button"
-              onClick={nextStage}
-              disabled={stageIndex >= stageOrder.length - 1}
-              className="rounded-[6px] bg-gov-navy px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
-            >
-              Next Stage
-            </button>
+            {stageIndex >= stageOrder.length - 1 ? (
+              <button
+                type="button"
+                onClick={() => window.location.href = "/"}
+                className="rounded-[6px] bg-gov-navy px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                Complete &amp; Close
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={nextStage}
+                className="rounded-[6px] bg-gov-navy px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                Next Stage
+              </button>
+            )}
           </div>
 
           {error ? (
