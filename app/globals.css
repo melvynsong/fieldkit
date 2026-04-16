@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #F4F5F8;
   --foreground: #171717;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-mono: var(--font-ibm-plex-mono);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* tech.gov.sg corporate palette */
+  --color-gov-navy: #1A2C5B;
+  --color-gov-red: #C0272D;
+  --color-gov-red-light: #F9E5E6;
+  --color-gov-red-border: #E8A0A2;
+  --color-gov-navy-light: #E8EBF4;
+  --color-gov-navy-muted: #8B9CC8;
+  --color-gov-page-bg: #F4F5F8;
+  --color-gov-border: #DDE1EA;
+  --color-gov-muted: #6B7280;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), "Avenir Next", "Segoe UI", sans-serif;
+  font-family: var(--font-ibm-plex-sans), "Segoe UI", sans-serif;
 }

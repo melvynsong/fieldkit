@@ -9,65 +9,72 @@ export default function ProblemForm() {
   const analyzeProblem = useWorkflowStore((state) => state.analyzeProblem);
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5">
-      <h2 className="text-sm font-semibold uppercase tracking-[0.12em] text-slate-500">
-        1. Problem Discovery
-      </h2>
-      <p className="mt-1 text-sm text-slate-600">
-        Define the problem clearly before solution and screen generation.
-      </p>
+    <section className="rounded-[10px] border border-gov-border bg-white p-5">
+      <div className="flex items-center gap-3">
+        <span className="h-2 w-2 shrink-0 rounded-full bg-gov-red" />
+        <hr className="flex-1 border-t border-gov-border" />
+      </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="text-sm font-semibold text-slate-800">Problem Statement *</span>
+          <span className="text-sm font-medium text-slate-800">
+            Problem Statement <span className="text-gov-red">*</span>
+          </span>
           <textarea
             rows={4}
             required
             value={input.problemStatement}
             onChange={(event) => setProblemField("problemStatement", event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+            placeholder="Describe the core problem to be solved…"
+            className="mt-1 w-full rounded-[6px] border border-gov-border bg-gov-page-bg px-3 py-2 text-sm transition placeholder:text-gov-muted focus:border-gov-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-gov-navy/20"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-800">Who Is Affected *</span>
+          <span className="text-sm font-medium text-slate-800">
+            Who is Affected <span className="text-gov-red">*</span>
+          </span>
           <textarea
             rows={4}
             required
             value={input.affectedUsers}
             onChange={(event) => setProblemField("affectedUsers", event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+            placeholder="Who experiences this problem and how does it affect them…"
+            className="mt-1 w-full rounded-[6px] border border-gov-border bg-gov-page-bg px-3 py-2 text-sm transition placeholder:text-gov-muted focus:border-gov-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-gov-navy/20"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-800">Business Context</span>
+          <span className="text-sm font-medium text-slate-800">Business Context</span>
           <textarea
             rows={3}
             value={input.businessContext}
             onChange={(event) => setProblemField("businessContext", event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+            placeholder="Relevant organisational or strategic context…"
+            className="mt-1 w-full rounded-[6px] border border-gov-border bg-gov-page-bg px-3 py-2 text-sm transition placeholder:text-gov-muted focus:border-gov-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-gov-navy/20"
           />
         </label>
 
         <label className="block">
-          <span className="text-sm font-semibold text-slate-800">Constraints</span>
+          <span className="text-sm font-medium text-slate-800">Constraints</span>
           <textarea
             rows={3}
             value={input.constraints}
             onChange={(event) => setProblemField("constraints", event.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+            placeholder="Technical, regulatory, or resource constraints…"
+            className="mt-1 w-full rounded-[6px] border border-gov-border bg-gov-page-bg px-3 py-2 text-sm transition placeholder:text-gov-muted focus:border-gov-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-gov-navy/20"
           />
         </label>
       </div>
 
       <label className="mt-4 block">
-        <span className="text-sm font-semibold text-slate-800">Additional Notes</span>
+        <span className="text-sm font-medium text-slate-800">Additional Notes</span>
         <textarea
           rows={3}
           value={input.additionalNotes}
           onChange={(event) => setProblemField("additionalNotes", event.target.value)}
-          className="mt-1 w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm"
+          placeholder="Any other context, references, or background that may help…"
+          className="mt-1 w-full rounded-[6px] border border-gov-border bg-gov-page-bg px-3 py-2 text-sm transition placeholder:text-gov-muted focus:border-gov-navy focus:bg-white focus:outline-none focus:ring-2 focus:ring-gov-navy/20"
         />
       </label>
 
@@ -75,9 +82,9 @@ export default function ProblemForm() {
         type="button"
         onClick={() => void analyzeProblem()}
         disabled={isLoading}
-        className="mt-4 rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        className="mt-5 rounded-[6px] bg-gov-red px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-[#a8222b] disabled:opacity-60"
       >
-        {isLoading ? "Analyzing & Generating..." : "Analyze & Generate Solution Plan"}
+        {isLoading ? "Analysing & Generating..." : "Analyse & Generate Solution Plan"}
       </button>
     </section>
   );

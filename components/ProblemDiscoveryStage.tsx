@@ -33,14 +33,7 @@ export default function ProblemDiscoveryStage() {
   }, [discovery, isAnalyzingProblem]);
 
   return (
-    <section className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.06)] sm:p-6">
-      <header className="mb-4">
-        <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Stage 1. Problem Discovery</h2>
-        <p className="mt-1 text-sm text-slate-600">
-          Define the problem, review the generated solution plan, and only proceed once the plan is refined.
-        </p>
-      </header>
-
+    <section className="rounded-[10px] border border-gov-border bg-white p-4 sm:p-6">
       <ProblemForm />
 
       {isAnalyzingProblem ? (

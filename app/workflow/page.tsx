@@ -41,14 +41,14 @@ export default function WorkflowPage() {
   const stageIndex = stageOrder.indexOf(currentStage);
 
   return (
-    <main className="relative flex-1 bg-slate-100/60 px-4 py-8 sm:px-6 lg:px-10">
+    <main className="relative flex-1 bg-gov-page-bg px-4 py-8 sm:px-6 lg:px-10">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <FieldKitHero />
 
-        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[0_8px_28px_rgba(15,23,42,0.06)]">
+        <section className="rounded-[10px] border border-gov-border bg-white p-5 shadow-[0_2px_12px_rgba(26,44,91,0.07)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-semibold text-slate-900 sm:text-2xl">FieldKit Product Workflow</h1>
-            <span className="rounded-full border border-slate-300 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+            <h1 className="text-xl font-semibold text-gov-navy sm:text-2xl">FieldKit Product Workflow</h1>
+            <span className="font-mono rounded-full border border-gov-border bg-gov-page-bg px-2.5 py-1 text-[11px] font-medium text-gov-muted">
               Build {BUILD_VERSION}
             </span>
           </div>
@@ -57,30 +57,30 @@ export default function WorkflowPage() {
             <StagePanel stage={currentStage} />
           </div>
 
-          <div className="mt-5 flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="mt-5 flex items-center justify-between rounded-[8px] border border-gov-border bg-gov-page-bg px-4 py-3">
             <button
               type="button"
               onClick={previousStage}
               disabled={stageIndex <= 0}
-              className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 disabled:opacity-50"
+              className="rounded-[6px] border border-gov-border bg-white px-3 py-1.5 text-sm font-semibold text-gov-navy disabled:opacity-40"
             >
               Previous Stage
             </button>
-            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-slate-500">
+            <p className="text-xs font-semibold uppercase tracking-[0.1em] text-gov-muted">
               Stage {stageIndex + 1} of {stageOrder.length}
             </p>
             <button
               type="button"
               onClick={nextStage}
               disabled={stageIndex >= stageOrder.length - 1}
-              className="rounded-lg bg-slate-900 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+              className="rounded-[6px] bg-gov-navy px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-40"
             >
               Next Stage
             </button>
           </div>
 
           {error ? (
-            <p className="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            <p className="mt-3 rounded-[6px] border border-gov-red-border bg-gov-red-light px-3 py-2 text-sm text-gov-red">
               {error}
             </p>
           ) : null}
