@@ -151,126 +151,150 @@ export default function ScaleWorkspace() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
 
+    // ── constants ──────────────────────────────────────────────────────────────
     const PAGE_W = 297;
     const PAGE_H = 210;
-    const MARGIN = 12;
-    const COL_WIDTHS = [10, 22, 68, 68, 38, 18, 18]; // #, ID, Story, Criteria, Epic, Priority, Status
-    const COL_LABELS = ["#", "ID", "User Story", "Acceptance Criteria", "Epic", "Priority", "Status"];
-    const ROW_H = 8;
-    const HEADER_H = 18;
+    const MARGIN_X = 10;
+    const MARGIN_BOTTOM = 8;
+    const CONTENT_W = PAGE_W - MARGIN_X * 2; // 277mm
 
-    const navy = [26, 44, 91] as [number, number, number];
-    const red = [192, 39, 45] as [number, number, number];
-    const pageBg = [244, 245, 248] as [number, number, number];
-    const white = [255, 255, 255] as [number, number, number];
-    const muted = [107, 114, 128] as [number, number, number];
+    const HEADER_H = 22;   // navy bar
+    const ACCENT_H = 2;    // red stripe
+    const COL_H = 8;       // column-header row height
+    const FONT_SIZE = 7.5;
+    const LINE_H = 4;      // mm per wrapped line
+    const PAD_V = 4;       // top & bottom cell padding
+    const PAD_L = 3;       // left cell padding
+    const MIN_ROW_H = 14;
+    const FOOTER_AREA = MARGIN_BOTTOM + 4; // reserved at page bottom
+
+    // col: label, width (mm), wrapWidth (0 = single line)
+    const COLS = [
+      { label: "#",                   width: 8,  wrap: 0  },
+      { label: "ID",                  width: 25, wrap: 0  },
+      { label: "User Story",          width: 90, wrap: 86 },
+      { label: "Acceptance Criteria", width: 57, wrap: 51 },
+      { label: "Epic",                width: 50, wrap: 0  },
+      { label: "Priority",            width: 22, wrap: 0  },
+      { label: "Status",              width: 22, wrap: 0  },
+    ];
+
+    const CONTENT_TOP = HEADER_H + ACCENT_H + COL_H; // Y after header + stripe + col labels
+    const MAX_Y = PAGE_H - FOOTER_AREA;
+
+    const navy: [number, number, number]  = [26, 44, 91];
+    const red: [number, number, number]   = [192, 39, 45];
+    const pageBg: [number, number, number] = [244, 245, 248];
+    const white: [number, number, number] = [255, 255, 255];
+    const muted: [number, number, number] = [107, 114, 128];
 
     const dateStr = new Date().toLocaleDateString("en-SG", {
       day: "2-digit", month: "short", year: "numeric",
     });
 
-    let page = 1;
-    const totalPages = () => doc.getNumberOfPages();
-
-    function drawHeader() {
-      // Navy header bar
-      doc.setFillColor(...navy);
-      doc.rect(0, 0, PAGE_W, HEADER_H, "F");
-      // Title
-      doc.setTextColor(...white);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("FieldKit — User Stories Export", MARGIN, 11);
-      // Date
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "normal");
-      doc.text(dateStr, PAGE_W - MARGIN, 11, { align: "right" });
-      // Red accent stripe
-      doc.setFillColor(...red);
-      doc.rect(0, HEADER_H, PAGE_W, 1.5, "F");
-    }
-
-    function drawColumnHeaders(y: number) {
-      doc.setFillColor(...pageBg);
-      doc.rect(MARGIN, y, PAGE_W - MARGIN * 2, ROW_H, "F");
-      doc.setTextColor(...navy);
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "bold");
-      let x = MARGIN;
-      COL_LABELS.forEach((label, i) => {
-        doc.text(label, x + 2, y + 5.5);
-        x += COL_WIDTHS[i];
-      });
-    }
-
-    function drawFooter(pageNum: number) {
-      doc.setFillColor(...pageBg);
-      doc.rect(0, PAGE_H - 8, PAGE_W, 8, "F");
-      doc.setTextColor(...muted);
-      doc.setFontSize(7);
-      doc.setFont("helvetica", "normal");
-      doc.text("FieldKit Prototype Generator | Confidential", MARGIN, PAGE_H - 2.5);
-      doc.text(`Page ${pageNum}`, PAGE_W - MARGIN, PAGE_H - 2.5, { align: "right" });
-    }
-
+    // ── helpers ────────────────────────────────────────────────────────────────
     function priorityColor(p: Priority): [number, number, number] {
       if (p === "High") return [153, 27, 27];
-      if (p === "Low") return [6, 95, 70];
+      if (p === "Low")  return [6, 95, 70];
       return [146, 64, 14];
     }
 
-    drawHeader();
-    let curY = HEADER_H + 4;
-    drawColumnHeaders(curY);
-    curY += ROW_H;
+    function getCells(row: FlatStory): string[] {
+      return [String(row.num), row.id, row.story, row.criteria, row.epic, row.priority, row.status];
+    }
+
+    function calcRowHeight(row: FlatStory): number {
+      const cells = getCells(row);
+      let maxLines = 1;
+      cells.forEach((cell, i) => {
+        const col = COLS[i];
+        if (col.wrap > 0) {
+          const lines = (doc.splitTextToSize(cell, col.wrap) as string[]).length;
+          if (lines > maxLines) maxLines = lines;
+        }
+      });
+      return Math.max(MIN_ROW_H, maxLines * LINE_H + PAD_V * 2);
+    }
+
+    function drawPageHeader() {
+      // Navy bar
+      doc.setFillColor(...navy);
+      doc.rect(0, 0, PAGE_W, HEADER_H, "F");
+      doc.setTextColor(...white);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("FieldKit — User Stories Export", MARGIN_X, HEADER_H / 2 + 2.5);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${dateStr} · ${rows.length} stories`, PAGE_W - MARGIN_X, HEADER_H / 2 + 2.5, { align: "right" });
+      // Red accent stripe
+      doc.setFillColor(...red);
+      doc.rect(0, HEADER_H, PAGE_W, ACCENT_H, "F");
+      // Column header row
+      doc.setFillColor(...pageBg);
+      doc.rect(MARGIN_X, HEADER_H + ACCENT_H, CONTENT_W, COL_H, "F");
+      doc.setTextColor(...navy);
+      doc.setFontSize(FONT_SIZE);
+      doc.setFont("helvetica", "bold");
+      let x = MARGIN_X;
+      COLS.forEach((col) => {
+        doc.text(col.label, x + PAD_L, HEADER_H + ACCENT_H + COL_H / 2 + 1.5);
+        x += col.width;
+      });
+    }
+
+    function drawRow(row: FlatStory, y: number, rowH: number, isEven: boolean) {
+      if (isEven) {
+        doc.setFillColor(250, 250, 252);
+        doc.rect(MARGIN_X, y, CONTENT_W, rowH, "F");
+      }
+      const cells = getCells(row);
+      doc.setFontSize(FONT_SIZE);
+      doc.setFont("helvetica", "normal");
+      let x = MARGIN_X;
+      cells.forEach((cell, i) => {
+        const col = COLS[i];
+        doc.setTextColor(...(i === 5 ? priorityColor(row.priority) : [30, 30, 30] as [number, number, number]));
+        if (col.wrap > 0) {
+          const lines = doc.splitTextToSize(cell, col.wrap) as string[];
+          lines.forEach((line: string, li: number) => {
+            doc.text(line, x + PAD_L, y + PAD_V + (li + 0.75) * LINE_H);
+          });
+        } else {
+          doc.text(cell, x + PAD_L, y + PAD_V + 0.75 * LINE_H);
+        }
+        x += col.width;
+      });
+    }
+
+    // ── render pass ────────────────────────────────────────────────────────────
+    drawPageHeader();
+    let curY = CONTENT_TOP;
 
     rows.forEach((row, idx) => {
-      if (curY + ROW_H > PAGE_H - 12) {
-        drawFooter(page);
+      const rowH = calcRowHeight(row);
+      if (curY + rowH > MAX_Y) {
         doc.addPage();
-        page++;
-        drawHeader();
-        curY = HEADER_H + 4;
-        drawColumnHeaders(curY);
-        curY += ROW_H;
+        drawPageHeader();
+        curY = CONTENT_TOP;
       }
-
-      if (idx % 2 === 0) {
-        doc.setFillColor(250, 250, 252);
-        doc.rect(MARGIN, curY, PAGE_W - MARGIN * 2, ROW_H, "F");
-      }
-
-      doc.setFontSize(6.5);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(30, 30, 30);
-
-      const cells = [
-        String(row.num),
-        row.id.slice(0, 12),
-        row.story,
-        row.criteria,
-        row.epic,
-        row.priority,
-        row.status,
-      ];
-
-      let x = MARGIN;
-      cells.forEach((cell, i) => {
-        const maxW = COL_WIDTHS[i] - 3;
-        if (i === 5) {
-          doc.setTextColor(...priorityColor(row.priority));
-        } else {
-          doc.setTextColor(30, 30, 30);
-        }
-        const clipped = doc.splitTextToSize(cell, maxW)[0] as string;
-        doc.text(clipped, x + 2, curY + 5.5);
-        x += COL_WIDTHS[i];
-      });
-
-      curY += ROW_H;
+      drawRow(row, curY, rowH, idx % 2 === 0);
+      curY += rowH;
     });
 
-    drawFooter(page);
+    // ── stamp "Page X of Y" on every page ─────────────────────────────────────
+    const totalPages = doc.getNumberOfPages();
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+      doc.setFillColor(...pageBg);
+      doc.rect(0, PAGE_H - FOOTER_AREA, PAGE_W, FOOTER_AREA, "F");
+      doc.setTextColor(...muted);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text("FieldKit Prototype Generator | Confidential", MARGIN_X, PAGE_H - MARGIN_BOTTOM / 2);
+      doc.text(`Page ${p} of ${totalPages}`, PAGE_W - MARGIN_X, PAGE_H - MARGIN_BOTTOM / 2, { align: "right" });
+    }
+
     doc.save("fieldkit-user-stories.pdf");
     showToast("PDF exported — fieldkit-user-stories.pdf");
   }, [rows, showToast]);
