@@ -10,6 +10,7 @@ import StageNavigation from "@/components/StageNavigation";
 import { BUILD_VERSION } from "@/lib/build-version";
 import { useWorkflowStore } from "@/lib/workflowStore";
 import type { WorkflowStage } from "@/types";
+import { useRouter } from "next/navigation";
 
 function StagePanel({ stage }: { stage: WorkflowStage }) {
   if (stage === "problem-discovery") {
@@ -28,6 +29,7 @@ function StagePanel({ stage }: { stage: WorkflowStage }) {
 }
 
 export default function WorkflowPage() {
+  const router = useRouter();
   const currentStage = useWorkflowStore((state) => state.currentStage);
   const previousStage = useWorkflowStore((state) => state.previousStage);
   const nextStage = useWorkflowStore((state) => state.nextStage);
@@ -72,7 +74,7 @@ export default function WorkflowPage() {
             {stageIndex >= stageOrder.length - 1 ? (
               <button
                 type="button"
-                onClick={() => window.location.href = "/"}
+                onClick={() => router.push("/")}
                 className="rounded-[6px] bg-gov-navy px-3 py-1.5 text-sm font-semibold text-white"
               >
                 Complete &amp; Close

@@ -649,7 +649,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     }));
 
     try {
-      const response = await fetch("/api/generate-screens", {
+      const response = await fetch("/fieldkit/api/generate-screens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -872,7 +872,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set({ isAnalyzingProblem: true, error: null });
 
     try {
-      const response = await fetch("/api/problem-discovery", {
+      const response = await fetch("/fieldkit/api/problem-discovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(problemInput),
@@ -936,7 +936,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       designFiles.forEach((file) => formData.append("images", file));
       formData.append("referenceUrls", referenceUrls);
 
-      const response = await fetch("/api/design-extract", {
+      const response = await fetch("/fieldkit/api/design-extract", {
         method: "POST",
         body: formData,
       });
@@ -999,7 +999,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set({ isGeneratingScreens: true, error: null });
 
     try {
-      const response = await fetch("/api/generate-screens", {
+      const response = await fetch("/fieldkit/api/generate-screens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1062,7 +1062,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     set({ isGeneratingScreens: true, error: null });
 
     try {
-      const response = await fetch("/api/generate-screens", {
+      const response = await fetch("/fieldkit/api/generate-screens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1133,7 +1133,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
     });
 
     try {
-      const response = await fetch("/api/generate-screens", {
+      const response = await fetch("/fieldkit/api/generate-screens", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

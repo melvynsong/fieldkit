@@ -272,7 +272,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       const formData = new FormData();
       formData.append("image", primaryImage.file);
 
-      const response = await fetch("/api/extract-design", {
+      const response = await fetch("/fieldkit/api/extract-design", {
         method: "POST",
         body: formData,
       });
