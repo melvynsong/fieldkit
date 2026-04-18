@@ -10,7 +10,7 @@ export default function UploadForm() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await fetch("/api/extract-design", {
+      const res = await fetch("/fieldkit/api/extract-design", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ imageUrl }),

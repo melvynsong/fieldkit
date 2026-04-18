@@ -34,7 +34,7 @@ export default function ProblemDiscoveryForm() {
     setError(null);
 
     try {
-      const response = await fetch("/api/problem-discovery", {
+      const response = await fetch("/fieldkit/api/problem-discovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
