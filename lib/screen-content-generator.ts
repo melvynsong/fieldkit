@@ -19,113 +19,134 @@ interface ScreenContentInput {
   tokens: BuildDesignTokens;
 }
 
-function tonePrefix(tone: BuildDesignControls["tone"]): string {
-  if (tone === "premium") return "Premium experience";
-  if (tone === "playful") return "Friendly experience";
-  if (tone === "friendly") return "Human-centered experience";
-  return "Professional experience";
+// ─── contextual field inference ───────────────────────────────────────────────
+
+function inferField(
+  screenName: string,
+  sectionName: string,
+  userAction: string
+): { label: string; placeholder: string } | null {
+  const ctx = `${screenName} ${sectionName} ${userAction}`.toLowerCase();
+
+  if (/email/.test(ctx)) return { label: "Email address", placeholder: "you@example.com" };
+  if (/password/.test(ctx)) return { label: "Password", placeholder: "Enter your password" };
+  if (/login|sign.?in/.test(ctx)) return { label: "Email address", placeholder: "you@example.com" };
+  if (/search|find|discover|look/.test(ctx)) return { label: "Search", placeholder: `Search ${screenName}…` };
+  if (/name/.test(ctx)) return { label: "Full name", placeholder: "Enter your name" };
+  if (/phone|mobile/.test(ctx)) return { label: "Phone number", placeholder: "+65 9000 0000" };
+  if (/amount|payment|pay|price/.test(ctx)) return { label: "Amount", placeholder: "0.00" };
+  if (/date|schedule|when|time/.test(ctx)) return { label: "Date", placeholder: "Select a date" };
+  if (/address|location/.test(ctx)) return { label: "Address", placeholder: "Enter address" };
+  if (/description|detail|note|comment|message|feedback/.test(ctx)) return { label: "Description", placeholder: "Add details…" };
+  if (/form|input|entry|submit|create|add|new|register|sign.?up/.test(ctx)) return { label: "Details", placeholder: "Enter details…" };
+
+  return null;
 }
 
-function toneVoice(tone: BuildDesignControls["tone"]): string {
-  if (tone === "premium") return "Concise, elevated, and confidence-building.";
-  if (tone === "playful") return "Warm, energetic, and easy to follow.";
-  if (tone === "friendly") return "Supportive, plain-language, and reassuring.";
-  return "Clear, direct, and outcome-focused.";
+// ─── contextual action label ──────────────────────────────────────────────────
+
+function inferPrimaryLabel(screenName: string, userAction: string, index: number, total: number): string {
+  const ctx = `${screenName} ${userAction}`.toLowerCase();
+
+  if (index >= total - 1) {
+    if (/pay|checkout|purchase|order/.test(ctx)) return "Confirm Payment";
+    if (/register|sign.?up|creat/.test(ctx)) return "Create Account";
+    if (/submit|send|publish/.test(ctx)) return "Submit";
+    if (/book|reserve/.test(ctx)) return "Confirm Booking";
+    return "Complete";
+  }
+
+  if (/search|find|look/.test(ctx)) return "Search";
+  if (/login|sign.?in/.test(ctx)) return "Sign In";
+  if (/select|choose|pick/.test(ctx)) return "Select & Continue";
+  if (/upload|attach|add/.test(ctx)) return "Upload";
+  if (/review|confirm/.test(ctx)) return "Review";
+  if (/register|sign.?up/.test(ctx)) return "Get Started";
+
+  return "Continue";
 }
 
-function densityHint(density: BuildDesignControls["density"]): string {
-  if (density === "compact") return "Compact content density emphasizes fast completion.";
-  if (density === "spacious") return "Spacious layout gives users room to scan and decide.";
-  return "Balanced spacing supports readability and speed.";
-}
+// ─── section builder ──────────────────────────────────────────────────────────
 
-function buildSections(screen: GeneratedScreen, input: ScreenContentInput, index: number): BuildScreenSection[] {
-  const problemLine = input.problemDiscovery?.definition.realProblem || "Core user problem";
-  const sectionNames = screen.keySections.length ? screen.keySections : ["Overview", "Details", "Action"];
+function buildSections(screen: GeneratedScreen, index: number): BuildScreenSection[] {
+  const sectionNames = screen.keySections.length
+    ? screen.keySections
+    : ["Main Content", "Details", "Actions"];
 
   return sectionNames.map((name, sectionIndex) => {
     const lowerName = name.toLowerCase();
-    const includeField = /form|input|details|profile|search/.test(lowerName) || sectionIndex === 0;
+    const needsField =
+      /form|input|detail|profile|search|entry|submit|filter|query|login|register|sign.?up|email|password/.test(
+        lowerName
+      ) ||
+      sectionIndex === 0 && /form|input|search/.test(
+        `${screen.screenName} ${screen.userAction}`.toLowerCase()
+      );
+
+    const field = needsField ? inferField(screen.screenName, name, screen.userAction) : null;
 
     return {
       id: `${screen.id}-section-${sectionIndex + 1}`,
       heading: name,
-      body:
-        sectionIndex === 0
-          ? `This area helps users ${screen.plannedUserAction.toLowerCase()} while staying aligned with: ${problemLine}.`
-          : `Focused guidance for ${screen.plannedPurpose.toLowerCase()} with ${input.controls.emphasis} emphasis.`,
-      bullets: [
-        `User intent: ${screen.plannedUserAction}`,
-        `Outcome target: ${screen.plannedPurpose}`,
-        `Flow context: Step ${index + 1} of ${Math.max(1, input.generatedScreens.length)}`,
-      ],
-      fieldLabel: includeField ? "Input" : undefined,
-      fieldPlaceholder: includeField ? `Enter details for ${screen.screenName.toLowerCase()}...` : undefined,
+      body: "",
+      bullets: [],
+      fieldLabel: field?.label,
+      fieldPlaceholder: field?.placeholder,
     };
   });
 }
 
-function buildActions(index: number, total: number, screenName: string): {
-  primaryAction: BuildScreenAction;
-  secondaryActions: BuildScreenAction[];
-} {
-  const primaryAction: BuildScreenAction =
-    index >= total - 1
-      ? {
-          id: `${screenName}-confirm`,
-          label: "Confirm",
-          intent: "confirm",
-        }
-      : {
-          id: `${screenName}-continue`,
-          label: "Continue",
-          intent: "next",
-        };
+// ─── action builder ───────────────────────────────────────────────────────────
+
+function buildActions(
+  screen: GeneratedScreen,
+  index: number,
+  total: number
+): { primaryAction: BuildScreenAction; secondaryActions: BuildScreenAction[] } {
+  const label = inferPrimaryLabel(screen.screenName, screen.userAction, index, total);
+
+  const primaryAction: BuildScreenAction = {
+    id: `${screen.id}-primary`,
+    label,
+    intent: index >= total - 1 ? "confirm" : "next",
+    targetIndex: index < total - 1 ? index + 1 : undefined,
+  };
 
   const secondaryActions: BuildScreenAction[] = [];
 
   if (index > 0) {
     secondaryActions.push({
-      id: `${screenName}-back`,
+      id: `${screen.id}-back`,
       label: "Back",
       intent: "back",
+      targetIndex: index - 1,
     });
   }
-
-  secondaryActions.push({
-    id: `${screenName}-details`,
-    label: "View Details",
-    intent: "toggle",
-    stateKey: `details-${screenName}`,
-  });
 
   return { primaryAction, secondaryActions };
 }
 
-export function generateBuildScreens(input: ScreenContentInput): BuildScreen[] {
-  if (!input.generatedScreens.length) {
-    return [];
-  }
+// ─── main export ──────────────────────────────────────────────────────────────
 
-  const flowGoal = input.solutionPlan.solution || "Resolve the core user problem with a focused flow.";
+export function generateBuildScreens(input: ScreenContentInput): BuildScreen[] {
+  if (!input.generatedScreens.length) return [];
 
   return input.generatedScreens.map((screen, index) => {
-    const { primaryAction, secondaryActions } = buildActions(index, input.generatedScreens.length, screen.id);
+    const { primaryAction, secondaryActions } = buildActions(
+      screen,
+      index,
+      input.generatedScreens.length
+    );
 
     return {
       id: `build-${screen.id}`,
       sourceScreenId: screen.id,
       screenName: screen.screenName,
-      title: `${tonePrefix(input.controls.tone)}: ${screen.screenName}`,
-      subtitle: screen.plannedPurpose,
-      description: `${toneVoice(input.controls.tone)} ${densityHint(input.controls.density)} This screen contributes to: ${flowGoal}`,
-      sections: buildSections(screen, input, index),
-      chips: [
-        `Style: ${input.controls.appStyle}`,
-        `Tone: ${input.controls.tone}`,
-        `Density: ${input.controls.density}`,
-        `Rhythm: ${input.tokens.layoutRhythm}`,
-      ],
+      title: screen.screenName,
+      subtitle: screen.plannedPurpose || screen.userAction,
+      description: screen.plannedPurpose || "",
+      sections: buildSections(screen, index),
+      chips: screen.contentTypes ?? [],
       primaryAction,
       secondaryActions,
     };

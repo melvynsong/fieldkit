@@ -4,10 +4,13 @@ import { useState } from "react";
 import { useWorkflowStore } from "@/lib/workflowStore";
 import type { BuildScreen, BuildScreenAction } from "@/types";
 
+// ─── types ────────────────────────────────────────────────────────────────────
+
 interface ScreenState {
   selectedItem: number | null;
-  formValue: string;
+  formValues: Record<string, string>;
   lastActionId: string | null;
+  submitted: boolean;
 }
 
 interface ScreenEditState {
@@ -21,166 +24,212 @@ interface ScreenEditState {
   showCards?: boolean;
 }
 
-type ScreenDomain = "commerce" | "booking" | "food" | "finance" | "workspace" | "general";
+// ─── content type helpers ─────────────────────────────────────────────────────
 
-function inferDomain(screen: BuildScreen): ScreenDomain {
-  const source = `${screen.screenName} ${screen.title} ${screen.subtitle}`.toLowerCase();
-
-  if (/menu|order|restaurant|dish|delivery/.test(source)) return "food";
-  if (/hotel|trip|stay|flight|booking|reservation/.test(source)) return "booking";
-  if (/cart|checkout|shop|product|catalog|store/.test(source)) return "commerce";
-  if (/wallet|payment|invoice|billing|finance|subscription/.test(source)) return "finance";
-  if (/workspace|dashboard|project|task|team|admin/.test(source)) return "workspace";
-
-  return "general";
+function hasType(types: string[], ...matchers: RegExp[]): boolean {
+  return types.some((t) => matchers.some((re) => re.test(t.toLowerCase())));
 }
 
-function domainListItems(domain: ScreenDomain): string[] {
-  if (domain === "food") return ["Popular near you", "Chef specials", "Fastest delivery", "Best value combos"];
-  if (domain === "booking") return ["Top-rated stays", "Free cancellation", "Great for families", "Last-minute deals"];
-  if (domain === "commerce") return ["Best sellers", "Trending now", "New arrivals", "Saved for later"];
-  if (domain === "finance") return ["Recent payments", "Upcoming bills", "Spending alerts", "Savings progress"];
-  if (domain === "workspace") return ["Assigned to you", "Due this week", "Blocked tasks", "Recently updated"];
-  return ["Top picks", "Recently viewed", "Recommended", "Saved for later"];
-}
+// ─── contextual list items ────────────────────────────────────────────────────
 
-function domainCardSubtitle(domain: ScreenDomain): string {
-  if (domain === "food") return "Ready in 20-30 min";
-  if (domain === "booking") return "Instant confirmation available";
-  if (domain === "commerce") return "In stock and ready to ship";
-  if (domain === "finance") return "Updated a few seconds ago";
-  if (domain === "workspace") return "Synced with your latest updates";
-  return "Open to view more details";
-}
-
-function domainInputLabel(domain: ScreenDomain): string {
-  if (domain === "food") return "Search dishes or restaurants";
-  if (domain === "booking") return "Destination";
-  if (domain === "commerce") return "Search products";
-  if (domain === "finance") return "Amount";
-  if (domain === "workspace") return "Task or project";
-  return "Input";
-}
-
-function PrimaryActionButton({
-  label,
-  onClick,
-  disabled,
-  isPressed,
-}: {
-  label: string;
-  onClick: () => void;
-  disabled?: boolean;
-  isPressed: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      className={`flex-1 rounded-lg px-4 py-2.5 font-semibold transition ${
-        isPressed
-          ? "scale-[0.98] bg-blue-600 text-white shadow-lg"
-          : "bg-slate-900 text-white hover:bg-slate-800"
-      }`}
-    >
-      {label}
-    </button>
+function inferListItems(screenName: string, keySections: string[]): string[] {
+  // Prefer actual section names from Stage 2 if they look like real UI items
+  const usable = keySections.filter(
+    (s) => s.length > 3 && !/header|footer|nav|action|button/i.test(s)
   );
+  if (usable.length >= 2) return usable.slice(0, 4);
+
+  // Fall back to contextual defaults
+  const ctx = screenName.toLowerCase();
+  if (/menu|order|food|dish/.test(ctx))
+    return ["Starters", "Main courses", "Sides & extras", "Drinks & desserts"];
+  if (/hotel|stay|accommodation/.test(ctx))
+    return ["Standard room", "Deluxe room", "Suite", "Family room"];
+  if (/flight|travel|trip/.test(ctx))
+    return ["Upcoming trips", "Past bookings", "Saved searches", "Special offers"];
+  if (/product|shop|store|catalog/.test(ctx))
+    return ["New arrivals", "Best sellers", "On sale", "Your wishlist"];
+  if (/task|project|board|kanban/.test(ctx))
+    return ["To do", "In progress", "Under review", "Completed"];
+  if (/notification|alert|message/.test(ctx))
+    return ["Unread messages", "System alerts", "Reminders", "Activity feed"];
+  if (/report|analytics|insight|stat/.test(ctx))
+    return ["Overview", "Performance metrics", "User activity", "Export options"];
+  if (/setting|profile|account/.test(ctx))
+    return ["Personal details", "Preferences", "Security", "Connected apps"];
+
+  return ["All items", "Recent activity", "Saved items", "Recommendations"];
 }
 
-function SecondaryActionButton({
-  label,
-  onClick,
-  isPressed,
-}: {
-  label: string;
-  onClick: () => void;
-  isPressed: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-lg border px-4 py-2.5 font-semibold transition ${
-        isPressed
-          ? "border-blue-400 bg-blue-50 text-blue-700"
-          : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-      }`}
-    >
-      {label}
-    </button>
-  );
+// ─── contextual card data ─────────────────────────────────────────────────────
+
+interface CardData { title: string; subtitle: string }
+
+function inferCards(screenName: string, keySections: string[]): CardData[] {
+  const usable = keySections.filter((s) => !/header|footer|nav|action/i.test(s)).slice(0, 4);
+  if (usable.length >= 2) {
+    return usable.map((s) => ({ title: s, subtitle: "Tap to view details" }));
+  }
+
+  const ctx = screenName.toLowerCase();
+  if (/dashboard|home|overview/.test(ctx))
+    return [
+      { title: "Recent activity", subtitle: "Last updated just now" },
+      { title: "Quick actions", subtitle: "Frequently used" },
+      { title: "Notifications", subtitle: "2 unread items" },
+      { title: "Your progress", subtitle: "On track this week" },
+    ];
+  if (/profile|account|setting/.test(ctx))
+    return [
+      { title: "Personal info", subtitle: "Name, email, phone" },
+      { title: "Security", subtitle: "Password & 2FA" },
+      { title: "Preferences", subtitle: "Notifications, language" },
+      { title: "Connected apps", subtitle: "3 apps connected" },
+    ];
+
+  return [
+    { title: "Overview", subtitle: "Summary view" },
+    { title: "Details", subtitle: "In-depth information" },
+    { title: "Actions", subtitle: "Available next steps" },
+    { title: "History", subtitle: "Past activity" },
+  ];
 }
 
-function HeroSection({
+// ─── subcomponents ────────────────────────────────────────────────────────────
+
+function ScreenHeader({
   title,
   subtitle,
-  showAnnotations,
+  navItems,
+  primaryColor,
 }: {
   title: string;
   subtitle: string;
-  showAnnotations: boolean;
+  navItems: string[];
+  primaryColor: string;
 }) {
   return (
-    <section className="rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 p-8 text-center">
-      {showAnnotations && (
-        <span className="mb-2 inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-          Hero Section
-        </span>
+    <div className="border-b border-slate-100 pb-4">
+      <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+      {subtitle && <p className="mt-1 text-sm text-slate-500 leading-5">{subtitle}</p>}
+      {navItems.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {navItems.slice(0, 4).map((item, i) => (
+            <span
+              key={item}
+              className="rounded-full border px-3 py-1 text-xs font-semibold"
+              style={
+                i === 0
+                  ? { backgroundColor: primaryColor, color: "#fff", borderColor: primaryColor }
+                  : { color: "#64748b", borderColor: "#e2e8f0" }
+              }
+            >
+              {item}
+            </span>
+          ))}
+        </div>
       )}
-      <h1 className="text-4xl font-bold text-slate-900">{title}</h1>
-      <p className="mt-2 text-lg text-slate-600">{subtitle}</p>
-    </section>
+    </div>
+  );
+}
+
+function FormSection({
+  sections,
+  screenName,
+  formValues,
+  onChange,
+}: {
+  sections: BuildScreen["sections"];
+  screenName: string;
+  formValues: Record<string, string>;
+  onChange: (id: string, value: string) => void;
+}) {
+  const formSections = sections.filter((s) => s.fieldLabel);
+  if (!formSections.length) return null;
+
+  return (
+    <div className="space-y-3">
+      {formSections.map((section) => (
+        <div key={section.id}>
+          <label className="block text-xs font-semibold text-slate-700 mb-1">
+            {section.fieldLabel}
+          </label>
+          <input
+            type={/password/i.test(section.fieldLabel ?? "") ? "password" : "text"}
+            value={formValues[section.id] ?? ""}
+            onChange={(e) => onChange(section.id, e.target.value)}
+            placeholder={section.fieldPlaceholder ?? `Enter ${(section.fieldLabel ?? "").toLowerCase()}…`}
+            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 transition focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 
 function ListSection({
-  title,
+  heading,
   items,
-  showAnnotations,
+  selectedItem,
+  onSelect,
 }: {
-  title: string;
+  heading: string;
   items: string[];
-  showAnnotations: boolean;
+  selectedItem: number | null;
+  onSelect: (idx: number) => void;
 }) {
   return (
-    <section className="space-y-2 rounded-xl border border-slate-200 bg-white p-6">
-      {showAnnotations && (
-        <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-          List Section
-        </span>
-      )}
-      <h3 className="font-semibold text-slate-900">{title}</h3>
+    <div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.1em] text-slate-400">{heading}</p>
       <div className="space-y-2">
         {items.map((item, idx) => (
           <button
             key={idx}
             type="button"
-            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-blue-300 hover:bg-blue-50"
+            onClick={() => onSelect(idx)}
+            className={`w-full rounded-lg border px-3 py-2.5 text-left text-sm transition ${
+              selectedItem === idx
+                ? "border-blue-400 bg-blue-50 font-semibold text-blue-800"
+                : "border-slate-200 bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"
+            }`}
           >
             {item}
           </button>
         ))}
       </div>
-    </section>
+    </div>
   );
 }
 
-function cleanDisplayText(value: string): string {
-  const cleaned = value
-    .replace(/^(User intent|Outcome target|Flow context):\s*/i, "")
-    .replace(/^This area helps users\s*/i, "")
-    .replace(/while staying aligned with:.*/i, "")
-    .replace(/with\s+.*emphasis\.?/i, "")
-    .trim();
-
-  if (/^step\s+\d+\s+of\s+\d+/i.test(cleaned)) {
-    return "";
-  }
-
-  return cleaned;
+function CardsSection({ cards }: { cards: CardData[] }) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {cards.map((card, idx) => (
+        <button
+          key={idx}
+          type="button"
+          className="rounded-lg border border-slate-200 bg-white p-3 text-left transition hover:border-slate-300 hover:shadow-sm"
+        >
+          <p className="text-sm font-semibold text-slate-800">{card.title}</p>
+          <p className="mt-0.5 text-xs text-slate-500">{card.subtitle}</p>
+        </button>
+      ))}
+    </div>
+  );
 }
+
+function SuccessBanner({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
+      <div className="flex items-center gap-2">
+        <span className="text-emerald-600 font-bold">✓</span>
+        <p className="text-sm font-semibold text-emerald-800">{message}</p>
+      </div>
+    </div>
+  );
+}
+
+// ─── main component ───────────────────────────────────────────────────────────
 
 export default function InteractiveScreenPreview({
   screen,
@@ -205,44 +254,59 @@ export default function InteractiveScreenPreview({
 }) {
   const [state, setState] = useState<ScreenState>({
     selectedItem: null,
-    formValue: "",
+    formValues: {},
     lastActionId: null,
+    submitted: false,
   });
 
-  const designSystem = useWorkflowStore((state) => state.designSystem);
+  const designSystem = useWorkflowStore((s) => s.designSystem);
+  const generatedScreens = useWorkflowStore((s) => s.generatedScreens);
+
+  // Look up the original Stage 2 screen for context
+  const sourceScreen = generatedScreens?.screens.find((s) => s.id === screen.sourceScreenId);
+  const contentTypes: string[] = sourceScreen?.contentTypes ?? screen.chips ?? [];
+  const keySections: string[] = sourceScreen?.keySections ?? [];
+  const navigation: string[] = generatedScreens?.navigation ?? [];
 
   if (!designSystem) {
     return (
-      <div className="rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-        <p className="text-sm text-slate-600">
-          Design system not found. Complete Stage 2 first.
-        </p>
+      <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+        <p className="text-sm text-slate-500">Complete Stage 2 to preview screens.</p>
       </div>
     );
   }
 
-  const hasForm = Boolean(screen.sections.find((section) => section.fieldPlaceholder));
-  const canSubmit = !hasForm || state.formValue.trim().length > 0;
-  const showForm = edit?.showForm ?? hasForm;
-  const showList = edit?.showList ?? true;
-  const showCards = edit?.showCards ?? true;
+  // ── decide what to render from contentTypes ────────────────────────────────
+  const showForm =
+    edit?.showForm ??
+    (hasType(contentTypes, /form/, /input/, /search/, /login/, /register/, /sign.?up/, /entry/, /filter/) ||
+      screen.sections.some((s) => s.fieldLabel));
 
-  const title = edit?.title || screen.title;
-  const subtitle = edit?.subtitle || screen.subtitle;
-  const primaryLabel = edit?.primaryLabel || screen.primaryAction.label;
-  const domain = inferDomain(screen);
-  const listItems = screen.sections
-    .flatMap((section) => section.bullets)
-    .map(cleanDisplayText)
-    .filter(Boolean)
-    .slice(0, 4);
+  const showList =
+    edit?.showList ??
+    hasType(contentTypes, /list/, /feed/, /results/, /items/, /catalog/, /grid/, /browse/);
 
+  const showCards =
+    edit?.showCards ??
+    hasType(contentTypes, /card/, /tile/, /overview/, /dashboard/, /summary/);
+
+  // Fall back to list if nothing specific was indicated
+  const showFallbackList = !showForm && !showList && !showCards;
+
+  const title = edit?.title ?? screen.title;
+  const subtitle = edit?.subtitle ?? screen.subtitle;
+  const primaryLabel = edit?.primaryLabel ?? screen.primaryAction.label;
+
+  const listItems = inferListItems(screen.screenName, keySections);
+  const cards = inferCards(screen.screenName, keySections);
+
+  // ── action handler ─────────────────────────────────────────────────────────
   function handleAction(action: BuildScreenAction) {
     setState((prev) => ({ ...prev, lastActionId: action.id }));
 
-    const mappedTarget = actionTargetOverrides?.[action.id];
-    if (typeof mappedTarget === "number") {
-      onNavigate(mappedTarget);
+    const overrideTarget = actionTargetOverrides?.[action.id];
+    if (typeof overrideTarget === "number") {
+      onNavigate(overrideTarget);
       return;
     }
 
@@ -251,138 +315,150 @@ export default function InteractiveScreenPreview({
       return;
     }
 
-    if ((action.intent === "next" || action.intent === "confirm") && !canSubmit) {
+    if (action.intent === "confirm") {
+      setState((prev) => ({ ...prev, submitted: true }));
+      onTriggerAction(action);
+      return;
+    }
+
+    if (action.intent === "next") {
+      onNavigate(currentIndex + 1);
+      return;
+    }
+
+    if (action.intent === "back") {
+      onNavigate(Math.max(0, currentIndex - 1));
       return;
     }
 
     onTriggerAction(action);
-  };
+  }
 
-  const containerClasses = deviceMode === "mobile"
-    ? "max-w-md mx-auto rounded-3xl border-8 border-slate-900 shadow-2xl overflow-hidden bg-black"
-    : "rounded-2xl border border-slate-300 overflow-hidden bg-white shadow-lg";
+  // ── frame classes ──────────────────────────────────────────────────────────
+  const frameClass =
+    deviceMode === "mobile"
+      ? "max-w-[390px] mx-auto rounded-[2.5rem] border-[8px] border-slate-900 overflow-hidden shadow-2xl bg-white"
+      : "rounded-2xl border border-slate-300 overflow-hidden shadow-lg bg-white";
 
   return (
-    <div className={containerClasses} style={{ borderColor: designSystem.colors.secondary }}>
-      {/* Device Frame Header for Mobile */}
+    <div className={frameClass}>
+      {/* Status bar — mobile only */}
       {deviceMode === "mobile" && (
-        <div className="flex items-center justify-between bg-black px-4 py-1.5 text-white">
-          <span className="text-xs font-semibold">9:41</span>
-          <span className="text-xs font-semibold">LTE 100%</span>
+        <div className="flex items-center justify-between bg-slate-900 px-5 py-1.5 text-white">
+          <span className="text-[11px] font-semibold">9:41</span>
+          <span className="text-[11px] font-semibold">LTE ▪ 100%</span>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="bg-white" style={{ backgroundColor: designSystem.colors.surface }}>
-        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2">
-          <h3 className="font-semibold text-slate-900">{screen.screenName}</h3>
-          <span className="text-xs font-semibold text-slate-500">Prototype</span>
-        </div>
-
-        {/* Screen Content */}
-        <div
-          key={`${screen.id}-${currentIndex}`}
-          className="space-y-4 p-4 transition-opacity duration-200 md:p-6"
-          style={{ color: designSystem.colors.text }}
+      {/* App nav bar */}
+      <div
+        className="flex items-center justify-between px-4 py-2.5"
+        style={{ backgroundColor: designSystem.colors.primary }}
+      >
+        <span className="text-sm font-bold text-white">{screen.screenName}</span>
+        <span
+          className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+          style={{ backgroundColor: "rgba(255,255,255,0.15)", color: "#fff" }}
         >
-          {/* Render based on screen sections */}
-          <HeroSection
-            title={title}
-            subtitle={subtitle}
-            showAnnotations={showAnnotations}
-          />
-
-          {/* Render sections */}
-          {showForm && (
-            <section className="space-y-4 rounded-xl border border-slate-200 bg-white p-6">
-              {showAnnotations ? (
-                <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-                  Form Section
-                </span>
-              ) : null}
-              <label className="block text-sm font-semibold text-slate-700">
-                {screen.sections[0]?.fieldLabel || domainInputLabel(domain)}
-              </label>
-              <input
-                type="text"
-                value={state.formValue}
-                onChange={(event) => setState((prev) => ({ ...prev, formValue: event.target.value }))}
-                placeholder={screen.sections[0]?.fieldPlaceholder || `Type ${domainInputLabel(domain).toLowerCase()}...`}
-                className="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-sm placeholder-slate-400 transition focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-              />
-            </section>
-          )}
-
-          {showList && (
-            <ListSection
-              title={edit?.sectionHeadings?.[screen.sections[0]?.id] || screen.sections[0]?.heading || "Options"}
-              items={listItems.length ? listItems : domainListItems(domain)}
-              showAnnotations={showAnnotations}
-            />
-          )}
-
-          {showCards && (
-            <section>
-              {showAnnotations ? (
-                <span className="inline-block rounded bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-700">
-                  Card Grid
-                </span>
-              ) : null}
-              <div className="mt-2 grid gap-3 md:grid-cols-2">
-                {screen.sections.slice(0, 4).map((section, idx) => (
-                  <button
-                    key={section.id}
-                    type="button"
-                    onClick={() => setState((prev) => ({ ...prev, selectedItem: idx }))}
-                    className={`rounded-lg border bg-white p-4 text-left transition ${
-                      state.selectedItem === idx
-                        ? "border-blue-400 shadow-md"
-                        : "border-slate-200 shadow-sm hover:border-slate-300"
-                    }`}
-                  >
-                    <h4 className="font-semibold text-slate-900">
-                      {edit?.sectionHeadings?.[section.id] || section.heading}
-                    </h4>
-                    <p className="mt-1 text-xs text-slate-600">{cleanDisplayText(section.body) || domainCardSubtitle(domain)}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {uiState?.confirmationComplete ? (
-            <div className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700">
-              Action confirmed. Prototype state updated.
-            </div>
-          ) : null}
-
-          {/* Actions */}
-          <div className="space-y-2 border-t border-slate-200 pt-4">
-            <PrimaryActionButton
-              label={primaryLabel}
-              onClick={() => handleAction(screen.primaryAction)}
-              isPressed={state.lastActionId === screen.primaryAction.id}
-              disabled={!canSubmit && (screen.primaryAction.intent === "next" || screen.primaryAction.intent === "confirm")}
-            />
-            {screen.secondaryActions.length > 0 && (
-              <div className="flex gap-2">
-                {screen.secondaryActions.map((action) => (
-                  <SecondaryActionButton
-                    key={action.id}
-                    label={edit?.secondaryLabels?.[action.id] || action.label}
-                    onClick={() => handleAction(action)}
-                    isPressed={state.lastActionId === action.id}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+          Prototype
+        </span>
       </div>
 
-      {/* Device Frame Footer for Mobile */}
+      {/* Screen body */}
+      <div
+        className="space-y-4 overflow-y-auto p-4"
+        style={{
+          backgroundColor: designSystem.colors.background,
+          color: designSystem.colors.text,
+          minHeight: deviceMode === "mobile" ? "480px" : "520px",
+          maxHeight: deviceMode === "mobile" ? "600px" : "680px",
+        }}
+        key={`${screen.id}-${currentIndex}`}
+      >
+        {/* Header */}
+        <ScreenHeader
+          title={title}
+          subtitle={subtitle}
+          navItems={navigation}
+          primaryColor={designSystem.colors.primary}
+        />
+
+        {/* Success banner (post-submit) */}
+        {state.submitted && (
+          <SuccessBanner
+            message={`${screen.primaryAction.intent === "confirm" ? "Submitted" : "Done"} — ${screen.screenName}`}
+          />
+        )}
+
+        {/* Form */}
+        {showForm && !state.submitted && (
+          <FormSection
+            sections={screen.sections}
+            screenName={screen.screenName}
+            formValues={state.formValues}
+            onChange={(id, val) =>
+              setState((prev) => ({
+                ...prev,
+                formValues: { ...prev.formValues, [id]: val },
+              }))
+            }
+          />
+        )}
+
+        {/* List */}
+        {(showList || showFallbackList) && !state.submitted && (
+          <ListSection
+            heading={keySections[0] || screen.screenName}
+            items={listItems}
+            selectedItem={state.selectedItem}
+            onSelect={(idx) => setState((prev) => ({ ...prev, selectedItem: idx }))}
+          />
+        )}
+
+        {/* Cards */}
+        {showCards && !state.submitted && <CardsSection cards={cards} />}
+      </div>
+
+      {/* Action bar */}
+      <div
+        className="flex gap-2 border-t border-slate-100 px-4 py-3"
+        style={{ backgroundColor: designSystem.colors.surface }}
+      >
+        {screen.secondaryActions.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            onClick={() => handleAction(action)}
+            className={`rounded-lg border px-4 py-2 text-sm font-semibold transition ${
+              state.lastActionId === action.id
+                ? "border-blue-300 bg-blue-50 text-blue-700"
+                : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+            }`}
+          >
+            {edit?.secondaryLabels?.[action.id] ?? action.label}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => handleAction(screen.primaryAction)}
+          disabled={state.submitted}
+          className="flex-1 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:opacity-50"
+          style={{
+            backgroundColor:
+              state.lastActionId === screen.primaryAction.id
+                ? designSystem.colors.accent
+                : designSystem.colors.primary,
+          }}
+        >
+          {primaryLabel}
+        </button>
+      </div>
+
+      {/* Home bar — mobile only */}
       {deviceMode === "mobile" && (
-        <div className="h-6 bg-black" />
+        <div className="flex justify-center bg-white pb-2 pt-1">
+          <div className="h-1 w-28 rounded-full bg-slate-300" />
+        </div>
       )}
     </div>
   );
